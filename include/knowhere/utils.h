@@ -182,9 +182,6 @@ round_down(const T value, const T align) {
     return value / align * align;
 }
 
-extern void
-ConvertIVFFlat(const BinarySet& binset, const MetricType metric_type, const uint8_t* raw_data, const size_t raw_size);
-
 bool
 UseDiskLoad(const std::string& index_type, const int32_t& /*version*/);
 

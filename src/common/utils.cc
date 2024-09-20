@@ -87,41 +87,6 @@ NormalizeDataset(const DataSetPtr dataset) {
     NormalizeVecs<DataType>(data, rows, dim);
 }
 
-void
-ConvertIVFFlat(const BinarySet& binset, const MetricType metric_type, const uint8_t* raw_data, const size_t raw_size) {
-    std::vector<std::string> names = {"IVF",  // compatible with knowhere-1.x
-                                      knowhere::IndexEnum::INDEX_FAISS_IVFFLAT};
-    auto binary = binset.GetByNames(names);
-    if (binary == nullptr) {
-        return;
-    }
-
-    MemoryIOReader reader(binary->data.get(), binary->size);
-
-    try {
-        // only read IVF_FLAT index header
-        std::unique_ptr<faiss::IndexIVFFlat> ivfl;
-        ivfl.reset(static_cast<faiss::IndexIVFFlat*>(faiss::read_index_nm(&reader)));
-
-        // is_cosine is not defined in IVF_FLAT_NM, so mark it from config
-        ivfl->is_cosine = IsMetricType(metric_type, knowhere::metric::COSINE);
-
-        ivfl->restore_codes(raw_data, raw_size);
-
-        // over-write IVF_FLAT_NM binary with native IVF_FLAT binary
-        MemoryIOWriter writer;
-        faiss::write_index(ivfl.get(), &writer);
-        std::shared_ptr<uint8_t[]> data(writer.data());
-        binary->data = data;
-        binary->size = writer.tellg();
-
-        LOG_KNOWHERE_INFO_ << "Convert IVF_FLAT_NM to native IVF_FLAT, rows " << ivfl->ntotal << ", dim " << ivfl->d;
-    } catch (...) {
-        // not IVF_FLAT_NM format, do nothing
-        return;
-    }
-}
-
 bool
 UseDiskLoad(const std::string& index_type, const int32_t& version) {
 #ifdef KNOWHERE_WITH_CARDINAL

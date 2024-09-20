@@ -314,79 +314,6 @@ static void read_InvertedLists(IndexIVF* ivf, IOReader* f, int io_flags) {
     ivf->own_invlists = true;
 }
 
-InvertedLists *read_InvertedLists_nm(IOReader *f, int io_flags) {
-    uint32_t h;
-    READ1 (h);
-    if (h == fourcc("ilar") && !(io_flags & IO_FLAG_MMAP)) {
-        auto ails = new ArrayInvertedLists(0, 0);
-        READ1(ails->nlist);
-        READ1(ails->code_size);
-        ails->ids.resize(ails->nlist);
-        std::vector<size_t> sizes(ails->nlist);
-        read_ArrayInvertedLists_sizes(f, sizes);
-        for (size_t i = 0; i < ails->nlist; i++) {
-            ails->ids[i].resize(sizes[i]);
-        }
-        for (size_t i = 0; i < ails->nlist; i++) {
-            size_t n = ails->ids[i].size();
-            if (n > 0) {
-                READANDCHECK(ails->ids[i].data(), n);
-            }
-        }
-        return ails;
-    } else if (h == fourcc ("ilar") && (io_flags & IO_FLAG_MMAP)) {
-        // then we load it as an OnDiskInvertedLists
-        FileIOReader *reader = dynamic_cast<FileIOReader*>(f);
-        FAISS_THROW_IF_NOT_MSG(reader, "mmap only supported for File objects");
-        FILE *fdesc = reader->f;
-
-        auto ails = new OnDiskInvertedLists();
-        READ1(ails->nlist);
-        READ1(ails->code_size);
-        ails->read_only = true;
-        ails->lists.resize(ails->nlist);
-        std::vector<size_t> sizes(ails->nlist);
-        read_ArrayInvertedLists_sizes(f, sizes);
-        size_t o0 = ftell(fdesc), o = o0;
-        { // do the mmap
-            struct stat buf;
-            int ret = fstat(fileno(fdesc), &buf);
-            FAISS_THROW_IF_NOT_FMT(ret == 0,
-                                   "fstat failed: %s", strerror(errno));
-            ails->totsize = buf.st_size;
-            ails->ptr = (uint8_t*)mmap(nullptr, ails->totsize,
-                                       PROT_READ, MAP_SHARED,
-                                       fileno(fdesc), 0);
-            FAISS_THROW_IF_NOT_FMT(ails->ptr != MAP_FAILED,
-                            "could not mmap: %s",
-                            strerror(errno));
-            madvise(ails->ptr, ails->totsize, MADV_RANDOM);
-        }
-
-        for (size_t i = 0; i < ails->nlist; i++) {
-            OnDiskInvertedLists::List & l = ails->lists[i];
-            l.size = l.capacity = sizes[i];
-            l.offset = o;
-            o += l.size * (sizeof(idx_t) +
-                           ails->code_size);
-        }
-        FAISS_THROW_IF_NOT(o <= ails->totsize);
-        // resume normal reading of file
-        fseek (fdesc, o, SEEK_SET);
-        return ails;
-    } else {
-        FAISS_THROW_MSG("read_InvertedLists: unsupported invlist type");
-    }
-}
-
-void read_InvertedLists_nm(IndexIVF *ivf, IOReader *f, int io_flags) {
-    InvertedLists *ils = read_InvertedLists_nm (f, io_flags);
-    FAISS_THROW_IF_NOT(!ils || (ils->nlist == ivf->nlist &&
-                                ils->code_size == ivf->code_size));
-    ivf->invlists = ils;
-    ivf->own_invlists = true;
-}
-
 static void read_ProductQuantizer(ProductQuantizer* pq, IOReader* f) {
     READ1(pq->d);
     READ1(pq->M);
@@ -1335,24 +1262,6 @@ Index* read_index(FILE* f, int io_flags) {
 Index* read_index(const char* fname, int io_flags) {
     FileIOReader reader(fname);
     Index* idx = read_index(&reader, io_flags);
-    return idx;
-}
-
-// read offset-only index
-Index *read_index_nm(IOReader *f, int io_flags) {
-    Index * idx = nullptr;
-    uint32_t h;
-    READ1(h);
-    if (h == fourcc("IwFl")) {
-        IndexIVFFlat * ivfl = new IndexIVFFlat ();
-        read_ivf_header (ivfl, f);
-        ivfl->code_size = ivfl->d * sizeof(float);
-        read_InvertedLists_nm(ivfl, f, io_flags);
-        idx = ivfl;
-    } else {
-        FAISS_THROW_FMT("Index type 0x%08x not supported\n", h);
-        idx = nullptr;
-    }
     return idx;
 }
 

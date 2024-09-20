@@ -419,40 +419,6 @@ void ArrayInvertedLists::resize(size_t list_no, size_t new_size) {
     codes[list_no].resize(new_size * code_size);
 }
 
-// temp code for IVF_FLAT_NM backward compatibility
-void ArrayInvertedLists::restore_codes(
-        const uint8_t* raw_data,
-        const size_t raw_size,
-        const bool is_cosine) {
-    size_t total = 0;
-    with_norm = is_cosine;
-    codes.resize(nlist);
-    if (is_cosine) {
-        code_norms.resize(nlist);
-    }
-    for (size_t i = 0; i < nlist; i++) {
-        auto list_size = ids[i].size();
-        total += list_size;
-        codes[i].resize(list_size * code_size);
-        if (is_cosine) {
-            code_norms[i].resize(list_size);
-        }
-        uint8_t* dst = codes[i].data();
-        for (size_t j = 0; j < list_size; j++) {
-            const uint8_t* src = raw_data + code_size * ids[i][j];
-            std::copy_n(src, code_size, dst);
-            dst += code_size;
-        }
-        if (is_cosine) {
-            fvec_norms_L2(code_norms[i].data(),
-                          (const float*)codes[i].data(),
-                          code_size / sizeof(float),
-                          list_size);
-        }
-    }
-    assert(total * code_size == raw_size);
-}
-
 const float* ArrayInvertedLists::get_code_norms(
         size_t list_no,
         size_t offset) const {

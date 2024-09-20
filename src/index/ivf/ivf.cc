@@ -158,7 +158,7 @@ class IvfIndexNode : public IndexNode {
     }
     Status
     Serialize(BinarySet& binset) const override {
-        return this->SerializeImpl(binset, typename IndexDispatch<IndexType>::Tag{});
+        return this->SerializeImpl(binset);
     }
     Status
     Deserialize(const BinarySet& binset, std::shared_ptr<Config> cfg) override;
@@ -294,10 +294,7 @@ class IvfIndexNode : public IndexNode {
     GetIndexMetaImpl(std::unique_ptr<Config> cfg, IVFFlatTag) const;
 
     Status
-    SerializeImpl(BinarySet& binset, IVFBaseTag) const;
-
-    Status
-    SerializeImpl(BinarySet& binset, IVFFlatTag) const;
+    SerializeImpl(BinarySet& binset) const;
 
     Status
     TrainInternal(const DataSetPtr dataset, std::shared_ptr<Config> cfg);
@@ -1089,7 +1086,7 @@ IvfIndexNode<DataType, IndexType>::GetIndexMetaImpl(std::unique_ptr<Config>, IVF
 
 template <typename DataType, typename IndexType>
 Status
-IvfIndexNode<DataType, IndexType>::SerializeImpl(BinarySet& binset, IVFBaseTag) const {
+IvfIndexNode<DataType, IndexType>::SerializeImpl(BinarySet& binset) const {
     try {
         if (!this->index_) {
             LOG_KNOWHERE_WARNING_ << "index can not be serialized for empty index";
@@ -1112,53 +1109,6 @@ IvfIndexNode<DataType, IndexType>::SerializeImpl(BinarySet& binset, IVFBaseTag) 
 
 template <typename DataType, typename IndexType>
 Status
-IvfIndexNode<DataType, IndexType>::SerializeImpl(BinarySet& binset, IVFFlatTag) const {
-    try {
-        if (!this->index_) {
-            LOG_KNOWHERE_WARNING_ << "index can not be serialized for empty index";
-            return Status::empty_index;
-        }
-        MemoryIOWriter writer;
-        LOG_KNOWHERE_INFO_ << "request version " << this->version_.VersionNumber();
-        if (this->version_ <= Version::GetMinimalVersion()) {
-            faiss::write_index_nm(index_.get(), &writer);
-            LOG_KNOWHERE_INFO_ << "write IVF_FLAT_NM, file size " << writer.tellg();
-        } else {
-            faiss::write_index(index_.get(), &writer);
-            LOG_KNOWHERE_INFO_ << "write IVF_FLAT, file size " << writer.tellg();
-        }
-        std::shared_ptr<uint8_t[]> index_data_ptr(writer.data());
-        binset.Append(Type(), index_data_ptr, writer.tellg());
-
-        // append raw data for backward compatible
-        if (this->version_ <= Version::GetMinimalVersion()) {
-            size_t dim = index_->d;
-            size_t rows = index_->ntotal;
-            size_t raw_data_size = dim * rows * sizeof(float);
-            auto raw_data = std::make_unique<uint8_t[]>(raw_data_size);
-            for (size_t i = 0; i < index_->nlist; i++) {
-                size_t list_size = index_->invlists->list_size(i);
-                const faiss::idx_t* ids = index_->invlists->get_ids(i);
-                const uint8_t* codes = index_->invlists->get_codes(i);
-                for (size_t j = 0; j < list_size; j++) {
-                    faiss::idx_t id = ids[j];
-                    const uint8_t* src = codes + j * dim * sizeof(float);
-                    uint8_t* dst = raw_data.get() + id * dim * sizeof(float);
-                    memcpy(dst, src, dim * sizeof(float));
-                }
-            }
-            binset.Append("RAW_DATA", std::move(raw_data), raw_data_size);
-            LOG_KNOWHERE_INFO_ << "append raw data for IVF_FLAT_NM, size " << raw_data_size;
-        }
-        return Status::success;
-    } catch (const std::exception& e) {
-        LOG_KNOWHERE_WARNING_ << "faiss inner error: " << e.what();
-        return Status::faiss_inner_error;
-    }
-}
-
-template <typename DataType, typename IndexType>
-Status
 IvfIndexNode<DataType, IndexType>::Deserialize(const BinarySet& binset, std::shared_ptr<Config> cfg) {
     std::vector<std::string> names = {"IVF",        // compatible with knowhere-1.x
                                       "BinaryIVF",  // compatible with knowhere-1.x
@@ -1171,17 +1121,7 @@ IvfIndexNode<DataType, IndexType>::Deserialize(const BinarySet& binset, std::sha
 
     MemoryIOReader reader(binary->data.get(), binary->size);
     try {
-        if constexpr (std::is_same<IndexType, faiss::IndexIVFFlat>::value) {
-            if (this->version_ <= Version::GetMinimalVersion()) {
-                auto raw_binary = binset.GetByName("RAW_DATA");
-                const BaseConfig& base_cfg = static_cast<const BaseConfig&>(*cfg);
-                ConvertIVFFlat(binset, base_cfg.metric_type.value(), raw_binary->data.get(), raw_binary->size);
-                // after conversion, binary size and data will be updated
-                reader.data_ = binary->data.get();
-                reader.total_ = binary->size;
-            }
-            index_.reset(static_cast<faiss::IndexIVFFlat*>(faiss::read_index(&reader)));
-        } else if constexpr (std::is_same<IndexType, faiss::IndexBinaryIVF>::value) {
+        if constexpr (std::is_same<IndexType, faiss::IndexBinaryIVF>::value) {
             index_.reset(static_cast<IndexType*>(faiss::read_index_binary(&reader)));
         } else {
             index_.reset(static_cast<IndexType*>(faiss::read_index(&reader)));

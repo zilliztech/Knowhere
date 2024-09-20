@@ -50,13 +50,6 @@ IndexIVFFlat::IndexIVFFlat(
     replace_invlists(new ArrayInvertedLists(nlist, code_size, is_cosine), true);
 }
 
-void IndexIVFFlat::restore_codes(
-        const uint8_t* raw_data,
-        const size_t raw_size) {
-    auto ails = dynamic_cast<faiss::ArrayInvertedLists*>(invlists);
-    ails->restore_codes(raw_data, raw_size, is_cosine);
-}
-
 void IndexIVFFlat::train(idx_t n, const float* x) {
     if (is_cosine) {
         auto x_normalized = knowhere::CopyAndNormalizeVecs(x, n, d);
