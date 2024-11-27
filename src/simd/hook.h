@@ -123,6 +123,11 @@ bool
 cpu_support_f16c();
 #endif
 
+#if defined(__aarch64__)
+bool
+supports_sve();
+#endif
+
 void
 enable_patch_for_fp32_bf16();
 

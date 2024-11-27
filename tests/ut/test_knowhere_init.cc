@@ -58,7 +58,7 @@ TEST_CASE("Knowhere global config", "[init]") {
 }
 
 TEST_CASE("Knowhere SIMD config", "[simd]") {
-    std::vector<std::string> v = {"AVX512", "AVX2", "SSE4_2", "GENERIC", "NEON"};
+    std::vector<std::string> v = {"AVX512", "AVX2", "SSE4_2", "GENERIC", "NEON", "SVE"};
     std::unordered_set<std::string> s(v.begin(), v.end());
 
     auto res = knowhere::KnowhereConfig::SetSimdType(knowhere::KnowhereConfig::SimdType::AVX512);
