@@ -198,7 +198,7 @@ TEST_CASE("Test index has raw data", "[IndexHasRawData]") {
 #endif
         // gpu index
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
         CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_RAFT_BRUTEFORCE, ver, {}));
         CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_RAFT_IVFFLAT, ver, {}));
         CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_RAFT_IVFPQ, ver, {}));
@@ -267,7 +267,7 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
         REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_FAISS_BIN_IVFFLAT, knowhere::feature::MMAP));
         REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_FAISS_SCANN, knowhere::feature::MMAP));
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::MMAP));
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::MMAP));
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::MMAP));
@@ -287,7 +287,7 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
     }
 
     SECTION("Check GPU") {
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
         REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::GPU));
         REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::GPU));
         REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::GPU));
@@ -399,7 +399,7 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
         REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_SPARSE_WAND, knowhere::feature::SPARSE_FLOAT32));
 
         // GPU Indexes
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
         REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::FLOAT32));
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::FP16));
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::BF16));
@@ -468,7 +468,7 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
             IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_SPARSE_INVERTED_INDEX, knowhere::feature::NO_TRAIN));
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_SPARSE_WAND, knowhere::feature::NO_TRAIN));
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
         REQUIRE_FALSE(
             IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::NO_TRAIN));
         REQUIRE_FALSE(
@@ -512,7 +512,7 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
             IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_SPARSE_INVERTED_INDEX, knowhere::feature::MV));
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_SPARSE_WAND, knowhere::feature::MV));
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::MV));
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::MV));
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::MV));

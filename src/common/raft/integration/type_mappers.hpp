@@ -26,6 +26,8 @@ using knowhere_data_type = float;
 using knowhere_indexing_type = std::int64_t;
 using knowhere_bitset_data_type = std::uint8_t;
 using knowhere_bitset_indexing_type = std::uint32_t;
+using knowhere_bitset_internal_data_type = std::uint32_t;
+using knowhere_bitset_internal_indexing_type = std::int64_t;
 
 namespace detail {
 

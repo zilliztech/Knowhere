@@ -375,7 +375,7 @@ class Benchmark_float_qps : public Benchmark_knowhere, public ::testing::Test {
         knowhere::KnowhereConfig::InitGPUResource(GPU_DEVICE_ID, 2);
         cfg_[knowhere::meta::DEVICE_ID] = GPU_DEVICE_ID;
 #endif
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
         knowhere::KnowhereConfig::SetRaftMemPool();
 #endif
     }

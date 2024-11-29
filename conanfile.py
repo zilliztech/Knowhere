@@ -24,7 +24,7 @@ class KnowhereConan(ConanFile):
     options = {
         "shared": [True, False],
         "fPIC": [True, False],
-        "with_raft": [True, False],
+        "with_cuvs": [True, False],
         "with_asan": [True, False],
         "with_diskann": [True, False],
         "with_cardinal": [True, False],
@@ -38,7 +38,7 @@ class KnowhereConan(ConanFile):
     default_options = {
         "shared": True,
         "fPIC": False,
-        "with_raft": False,
+        "with_cuvs": False,
         "with_asan": False,
         "with_diskann": False,
         "with_cardinal": False,
@@ -171,7 +171,7 @@ class KnowhereConan(ConanFile):
         tc.variables["WITH_ASAN"] = self.options.with_asan
         tc.variables["WITH_DISKANN"] = self.options.with_diskann
         tc.variables["WITH_CARDINAL"] = self.options.with_cardinal
-        tc.variables["WITH_RAFT"] = self.options.with_raft
+        tc.variables["WITH_CUVS"] = self.options.with_cuvs
         tc.variables["WITH_PROFILER"] = self.options.with_profiler
         tc.variables["WITH_UT"] = self.options.with_ut
         tc.variables["WITH_BENCHMARK"] = self.options.with_benchmark

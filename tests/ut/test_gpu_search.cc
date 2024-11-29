@@ -21,7 +21,7 @@
 #include "knowhere/index/index_factory.h"
 #include "utils.h"
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
 TEST_CASE("Test All GPU Index", "[search]") {
     using Catch::Approx;
 

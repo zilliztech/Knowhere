@@ -14,13 +14,13 @@
 #include "knowhere/index/index_table.h"
 #include "simd/hook.h"
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
 #include <cuda_runtime_api.h>
 #endif
 
 namespace knowhere {
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
 
 bool
 checkGpuAvailable(const std::string& name) {
@@ -55,7 +55,7 @@ IndexFactory::Create(const std::string& name, const int32_t& version, const Obje
     LOG_KNOWHERE_INFO_ << "use key " << key << " to create knowhere index " << name << " with version " << version;
     auto fun_map_v = (FunMapValue<Index<IndexNode>>*)(func_mapping_[key].get());
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
     if (!checkGpuAvailable(name)) {
         return expected<Index<IndexNode>>::Err(Status::cuda_runtime_error, "gpu not available");
     }

@@ -24,7 +24,7 @@ endif()
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
-if(WITH_RAFT)
+if(WITH_CUVS)
   set(CMAKE_CUDA_FLAGS_DEBUG "-O0 -g -Xcompiler=-w ")
   set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -DNDEBUG -Xcompiler=-w")
 endif()

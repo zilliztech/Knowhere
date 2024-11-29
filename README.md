@@ -46,9 +46,9 @@ $ conan install .. --build=missing -o with_ut=True -s compiler.libcxx=libstdc++1
 #RELEASE CPU
 $ conan install .. --build=missing -o with_ut=True -s compiler.libcxx=libstdc++11 -s build_type=Release
 #DEBUG GPU
-$ conan install .. --build=missing -o with_ut=True -o with_raft=True -s compiler.libcxx=libstdc++11 -s build_type=Debug
+$ conan install .. --build=missing -o with_ut=True -o with_cuvs=True -s compiler.libcxx=libstdc++11 -s build_type=Debug
 #RELEASE GPU
-$ conan install .. --build=missing -o with_ut=True -o with_raft=True -s compiler.libcxx=libstdc++11 -s build_type=Release
+$ conan install .. --build=missing -o with_ut=True -o with_cuvs=True -s compiler.libcxx=libstdc++11 -s build_type=Release
 #DISKANN SUPPORT
 $ conan install .. --build=missing -o with_ut=True -o with_diskann=True -s compiler.libcxx=libstdc++11 -s build_type=Debug/Release
 #build with conan

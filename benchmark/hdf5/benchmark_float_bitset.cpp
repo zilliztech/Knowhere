@@ -176,7 +176,7 @@ class Benchmark_float_bitset : public Benchmark_knowhere, public ::testing::Test
     test_##NAME<T>(conf)
 
 TEST_F(Benchmark_float_bitset, TEST_IVF_FLAT) {
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
     index_type_ = knowhere::IndexEnum::INDEX_RAFT_IVFFLAT;
 #else
     index_type_ = knowhere::IndexEnum::INDEX_FAISS_IVFFLAT;
@@ -204,7 +204,7 @@ TEST_F(Benchmark_float_bitset, TEST_IVF_SQ8) {
 }
 
 TEST_F(Benchmark_float_bitset, TEST_IVF_PQ) {
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
     index_type_ = knowhere::IndexEnum::INDEX_RAFT_IVFPQ;
 #else
     index_type_ = knowhere::IndexEnum::INDEX_FAISS_IVFPQ;

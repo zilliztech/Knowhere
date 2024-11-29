@@ -20,16 +20,18 @@
 #include <istream>
 #include <limits>
 #include <ostream>
-#include <raft/core/bitset.cuh>
+#include <cuvs/core/bitmap.hpp>
+#include <cuvs/core/bitset.hpp>
+#include <cuvs/distance/distance.hpp>
+#include <cuvs/neighbors/common.hpp>
+#include <cuvs/neighbors/ivf_pq.hpp>
 #include <raft/core/copy.cuh>
 #include <raft/core/device_resources_manager.hpp>
 #include <raft/core/device_setter.hpp>
 #include <raft/core/resource/cuda_stream.hpp>
 #include <raft/core/resource/thrust_policy.hpp>
 #include <raft/core/serialize.hpp>
-#include <raft/distance/distance_types.hpp>
-#include <raft/neighbors/ivf_pq_types.hpp>
-#include <raft/neighbors/sample_filter.cuh>
+
 #include <tuple>
 #include <type_traits>
 
@@ -50,7 +52,7 @@ template <>
 struct raft_index_type_mapper<true, raft_proto::raft_index_kind::brute_force> : std::true_type {
     using data_type = raft_data_t<raft_proto::raft_index_kind::brute_force>;
     using indexing_type = raft_indexing_t<raft_proto::raft_index_kind::brute_force>;
-    using type = raft_proto::raft_index<raft::neighbors::brute_force::index, data_type>;
+    using type = raft_proto::raft_index<cuvs::neighbors::brute_force::index, data_type>;
     using underlying_index_type = typename type::vector_index_type;
     using index_params_type = typename type::index_params_type;
     using search_params_type = typename type::search_params_type;
@@ -59,7 +61,7 @@ template <>
 struct raft_index_type_mapper<true, raft_proto::raft_index_kind::ivf_flat> : std::true_type {
     using data_type = raft_data_t<raft_proto::raft_index_kind::ivf_flat>;
     using indexing_type = raft_indexing_t<raft_proto::raft_index_kind::ivf_flat>;
-    using type = raft_proto::raft_index<raft::neighbors::ivf_flat::index, data_type, indexing_type>;
+    using type = raft_proto::raft_index<cuvs::neighbors::ivf_flat::index, data_type, indexing_type>;
     using underlying_index_type = typename type::vector_index_type;
     using index_params_type = typename type::index_params_type;
     using search_params_type = typename type::search_params_type;
@@ -68,7 +70,7 @@ template <>
 struct raft_index_type_mapper<true, raft_proto::raft_index_kind::ivf_pq> : std::true_type {
     using data_type = raft_data_t<raft_proto::raft_index_kind::ivf_pq>;
     using indexing_type = raft_indexing_t<raft_proto::raft_index_kind::ivf_pq>;
-    using type = raft_proto::raft_index<raft::neighbors::ivf_pq::index, indexing_type>;
+    using type = raft_proto::raft_index<cuvs::neighbors::ivf_pq::index, indexing_type>;
     using underlying_index_type = typename type::vector_index_type;
     using index_params_type = typename type::index_params_type;
     using search_params_type = typename type::search_params_type;
@@ -77,7 +79,7 @@ template <>
 struct raft_index_type_mapper<true, raft_proto::raft_index_kind::cagra> : std::true_type {
     using data_type = raft_data_t<raft_proto::raft_index_kind::cagra>;
     using indexing_type = raft_indexing_t<raft_proto::raft_index_kind::cagra>;
-    using type = raft_proto::raft_index<raft::neighbors::cagra::index, data_type, indexing_type>;
+    using type = raft_proto::raft_index<cuvs::neighbors::cagra::index, data_type, indexing_type>;
     using underlying_index_type = typename type::vector_index_type;
     using index_params_type = typename type::index_params_type;
     using search_params_type = typename type::search_params_type;
@@ -114,52 +116,52 @@ using raft_search_params_t = typename detail::raft_index_type_mapper<true, Index
 // Metrics are passed between knowhere and RAFT as strings to avoid tight
 // coupling between the implementation details of either one.
 [[nodiscard]] inline auto
-metric_string_to_raft_distance_type(std::string const& metric_string) {
-    auto result = raft::distance::DistanceType::L2Expanded;
+metric_string_to_cuvs_distance_type(std::string const& metric_string) {
+    auto result = cuvs::distance::DistanceType::L2Expanded;
     if (metric_string == "L2") {
         result = raft::distance::DistanceType::L2Expanded;
     } else if (metric_string == "COSINE") {
         result = raft::distance::DistanceType::InnerProduct;
     } else if (metric_string == "L2SqrtExpanded") {
-        result = raft::distance::DistanceType::L2SqrtExpanded;
+        result = cuvs::distance::DistanceType::L2SqrtExpanded;
     } else if (metric_string == "CosineExpanded") {
-        result = raft::distance::DistanceType::CosineExpanded;
+        result = cuvs::distance::DistanceType::CosineExpanded;
     } else if (metric_string == "L1") {
-        result = raft::distance::DistanceType::L1;
+        result = cuvs::distance::DistanceType::L1;
     } else if (metric_string == "L2Unexpanded") {
-        result = raft::distance::DistanceType::L2Unexpanded;
+        result = cuvs::distance::DistanceType::L2Unexpanded;
     } else if (metric_string == "L2SqrtUnexpanded") {
-        result = raft::distance::DistanceType::L2SqrtUnexpanded;
+        result = cuvs::distance::DistanceType::L2SqrtUnexpanded;
     } else if (metric_string == "IP") {
-        result = raft::distance::DistanceType::InnerProduct;
+        result = cuvs::distance::DistanceType::InnerProduct;
     } else if (metric_string == "Linf") {
-        result = raft::distance::DistanceType::Linf;
+        result = cuvs::distance::DistanceType::Linf;
     } else if (metric_string == "Canberra") {
-        result = raft::distance::DistanceType::Canberra;
+        result = cuvs::distance::DistanceType::Canberra;
     } else if (metric_string == "LpUnexpanded") {
-        result = raft::distance::DistanceType::LpUnexpanded;
+        result = cuvs::distance::DistanceType::LpUnexpanded;
     } else if (metric_string == "CorrelationExpanded") {
-        result = raft::distance::DistanceType::CorrelationExpanded;
+        result = cuvs::distance::DistanceType::CorrelationExpanded;
     } else if (metric_string == "JACCARD") {
-        result = raft::distance::DistanceType::JaccardExpanded;
+        result = cuvs::distance::DistanceType::JaccardExpanded;
     } else if (metric_string == "HellingerExpanded") {
-        result = raft::distance::DistanceType::HellingerExpanded;
+        result = cuvs::distance::DistanceType::HellingerExpanded;
     } else if (metric_string == "Haversine") {
-        result = raft::distance::DistanceType::Haversine;
+        result = cuvs::distance::DistanceType::Haversine;
     } else if (metric_string == "BrayCurtis") {
-        result = raft::distance::DistanceType::BrayCurtis;
+        result = cuvs::distance::DistanceType::BrayCurtis;
     } else if (metric_string == "JensenShannon") {
-        result = raft::distance::DistanceType::JensenShannon;
+        result = cuvs::distance::DistanceType::JensenShannon;
     } else if (metric_string == "HAMMING") {
-        result = raft::distance::DistanceType::HammingUnexpanded;
+        result = cuvs::distance::DistanceType::HammingUnexpanded;
     } else if (metric_string == "KLDivergence") {
-        result = raft::distance::DistanceType::KLDivergence;
+        result = cuvs::distance::DistanceType::KLDivergence;
     } else if (metric_string == "RusselRaoExpanded") {
-        result = raft::distance::DistanceType::RusselRaoExpanded;
+        result = cuvs::distance::DistanceType::RusselRaoExpanded;
     } else if (metric_string == "DiceExpanded") {
-        result = raft::distance::DistanceType::DiceExpanded;
+        result = cuvs::distance::DistanceType::DiceExpanded;
     } else if (metric_string == "Precomputed") {
-        result = raft::distance::DistanceType::Precomputed;
+        result = cuvs::distance::DistanceType::Precomputed;
     } else {
         RAFT_FAIL("Unrecognized metric type %s", metric_string.c_str());
     }
@@ -167,24 +169,28 @@ metric_string_to_raft_distance_type(std::string const& metric_string) {
 }
 
 [[nodiscard]] inline auto
-codebook_string_to_raft_codebook_gen(std::string const& codebook_string) {
-    auto result = raft::neighbors::ivf_pq::codebook_gen::PER_SUBSPACE;
+codebook_string_to_cuvs_codebook_gen(std::string const& codebook_string) {
+    auto result = cuvs::neighbors::ivf_pq::codebook_gen::PER_SUBSPACE;
     if (codebook_string == "PER_SUBSPACE") {
-        result = raft::neighbors::ivf_pq::codebook_gen::PER_SUBSPACE;
+        result = cuvs::neighbors::ivf_pq::codebook_gen::PER_SUBSPACE;
     } else if (codebook_string == "PER_CLUSTER") {
-        result = raft::neighbors::ivf_pq::codebook_gen::PER_CLUSTER;
+        result = cuvs::neighbors::ivf_pq::codebook_gen::PER_CLUSTER;
     } else {
         RAFT_FAIL("Unrecognized codebook type %s", codebook_string.c_str());
     }
     return result;
 }
 [[nodiscard]] inline auto
-build_algo_string_to_cagra_build_algo(std::string const& algo_string) {
-    auto result = raft::neighbors::cagra::graph_build_algo::IVF_PQ;
+build_algo_string_to_cagra_build_algo(std::string const& algo_string, int intermediate_graph_degree, int nn_descent_niter, cuvs::distance::DistanceType metric) {
+    std::variant<std::monostate,
+               cuvs::neighbors::cagra::graph_build_params::ivf_pq_params,
+               cuvs::neighbors::cagra::graph_build_params::nn_descent_params> result = cuvs::neighbors::cagra::graph_build_params::ivf_pq_params();
     if (algo_string == "IVF_PQ") {
-        result = raft::neighbors::cagra::graph_build_algo::IVF_PQ;
+        result = cuvs::neighbors::cagra::graph_build_params::ivf_pq_params();
     } else if (algo_string == "NN_DESCENT") {
-        result = raft::neighbors::cagra::graph_build_algo::NN_DESCENT;
+        auto nn_desc_params = cuvs::neighbors::cagra::graph_build_params::nn_descent_params(intermediate_graph_degree, metric);
+        nn_desc_params.max_iterations = nn_descent_niter;
+        result = nn_desc_params;
     } else {
         RAFT_FAIL("Unrecognized CAGRA build algo %s", algo_string.c_str());
     }
@@ -193,15 +199,15 @@ build_algo_string_to_cagra_build_algo(std::string const& algo_string) {
 
 [[nodiscard]] inline auto
 search_algo_string_to_cagra_search_algo(std::string const& algo_string) {
-    auto result = raft::neighbors::cagra::search_algo::AUTO;
+    auto result = cuvs::neighbors::cagra::search_algo::AUTO;
     if (algo_string == "SINGLE_CTA") {
-        result = raft::neighbors::cagra::search_algo::SINGLE_CTA;
+        result = cuvs::neighbors::cagra::search_algo::SINGLE_CTA;
     } else if (algo_string == "MULTI_CTA") {
-        result = raft::neighbors::cagra::search_algo::MULTI_CTA;
+        result = cuvs::neighbors::cagra::search_algo::MULTI_CTA;
     } else if (algo_string == "MULTI_KERNEL") {
-        result = raft::neighbors::cagra::search_algo::MULTI_KERNEL;
+        result = cuvs::neighbors::cagra::search_algo::MULTI_KERNEL;
     } else if (algo_string == "AUTO") {
-        result = raft::neighbors::cagra::search_algo::AUTO;
+        result = cuvs::neighbors::cagra::search_algo::AUTO;
     } else {
         RAFT_FAIL("Unrecognized CAGRA search algo %s", algo_string.c_str());
     }
@@ -210,13 +216,13 @@ search_algo_string_to_cagra_search_algo(std::string const& algo_string) {
 
 [[nodiscard]] inline auto
 hashmap_mode_string_to_cagra_hashmap_mode(std::string const& mode_string) {
-    auto result = raft::neighbors::cagra::hash_mode::AUTO;
+    auto result = cuvs::neighbors::cagra::hash_mode::AUTO;
     if (mode_string == "HASH") {
-        result = raft::neighbors::cagra::hash_mode::HASH;
+        result = cuvs::neighbors::cagra::hash_mode::HASH;
     } else if (mode_string == "SMALL") {
-        result = raft::neighbors::cagra::hash_mode::SMALL;
+        result = cuvs::neighbors::cagra::hash_mode::SMALL;
     } else if (mode_string == "AUTO") {
-        result = raft::neighbors::cagra::hash_mode::AUTO;
+        result = cuvs::neighbors::cagra::hash_mode::AUTO;
     } else {
         RAFT_FAIL("Unrecognized CAGRA hash mode %s", mode_string.c_str());
     }
@@ -264,7 +270,7 @@ dtype_string_to_cuda_dtype(std::string const& dtype_string) {
     return result;
 }
 
-// Given a generic config without RAFT symbols, convert to RAFT index build
+// Given a generic config without cuVS symbols, convert to cuVS index build
 // parameters
 template <raft_proto::raft_index_kind IndexKind>
 [[nodiscard]] auto
@@ -273,9 +279,8 @@ config_to_index_params(raft_knowhere_config const& raw_config) {
     auto config = validate_raft_knowhere_config(raw_config);
     auto result = raft_index_params_t<IndexKind>{};
 
-    result.metric = metric_string_to_raft_distance_type(config.metric_type);
+    result.metric = metric_string_to_cuvs_distance_type(config.metric_type);
     result.metric_arg = config.metric_arg;
-    result.add_data_on_build = config.add_data_on_build;
 
     if constexpr (IndexKind == raft_proto::raft_index_kind::ivf_flat ||
                   IndexKind == raft_proto::raft_index_kind::ivf_pq) {
@@ -283,6 +288,7 @@ config_to_index_params(raft_knowhere_config const& raw_config) {
         result.kmeans_n_iters = *(config.kmeans_n_iters);
         result.kmeans_trainset_fraction = *(config.kmeans_trainset_fraction);
         result.conservative_memory_allocation = *(config.conservative_memory_allocation);
+        result.add_data_on_build = config.add_data_on_build;
     }
     if constexpr (IndexKind == raft_proto::raft_index_kind::ivf_flat) {
         result.adaptive_centers = *(config.adaptive_centers);
@@ -290,19 +296,20 @@ config_to_index_params(raft_knowhere_config const& raw_config) {
     if constexpr (IndexKind == raft_proto::raft_index_kind::ivf_pq) {
         result.pq_dim = *(config.m);
         result.pq_bits = *(config.nbits);
-        result.codebook_kind = codebook_string_to_raft_codebook_gen(*(config.codebook_kind));
+        result.codebook_kind = codebook_string_to_cuvs_codebook_gen(*(config.codebook_kind));
         result.force_random_rotation = *(config.force_random_rotation);
     }
     if constexpr (IndexKind == raft_proto::raft_index_kind::cagra) {
         result.intermediate_graph_degree = *(config.intermediate_graph_degree);
         result.graph_degree = *(config.graph_degree);
-        result.build_algo = build_algo_string_to_cagra_build_algo(*(config.build_algo));
-        result.nn_descent_niter = *(config.nn_descent_niter);
+        result.attach_dataset_on_build = config.add_data_on_build;
+        // TODO(mide): add compression
+        result.graph_build_params = build_algo_string_to_cagra_build_algo(*(config.build_algo), result.intermediate_graph_degree, *(config.nn_descent_niter), result.metric);
     }
     return result;
 }
 
-// Given a generic config without RAFT symbols, convert to RAFT index search
+// Given a generic config without cuVS symbols, convert to cuVS index search
 // parameters
 template <raft_proto::raft_index_kind IndexKind>
 [[nodiscard]] auto
@@ -360,9 +367,9 @@ select_device_id() {
     return result;
 }
 
-// This struct is used to connect knowhere to a RAFT index. The implementation
+// This struct is used to connect knowhere to a cuVS index. The implementation
 // is provided here, but this header should never be directly included in
-// another knowhere header. This ensures that RAFT symbols are not exposed in
+// another knowhere header. This ensures that cuVS symbols are not exposed in
 // any knowhere header.
 template <raft_proto::raft_index_kind IndexKind>
 struct raft_knowhere_index<IndexKind>::impl {
@@ -452,12 +459,14 @@ struct raft_knowhere_index<IndexKind>::impl {
         }
 
         auto device_bitset =
-            std::optional<raft::core::bitset<knowhere_bitset_data_type, knowhere_bitset_indexing_type>>{};
+            std::optional<cuvs::core::bitset<knowhere_bitset_internal_data_type, knowhere_bitset_internal_indexing_type>>{};
         auto k_tmp = k;
         if (bitset_data != nullptr && bitset_byte_size != 0) {
             device_bitset =
-                raft::core::bitset<knowhere_bitset_data_type, knowhere_bitset_indexing_type>(res, bitset_size);
-            raft::copy(res, device_bitset->to_mdspan(), raft::make_host_vector_view(bitset_data, bitset_byte_size));
+                cuvs::core::bitset<knowhere_bitset_internal_data_type, knowhere_bitset_internal_indexing_type>(res, bitset_size);
+            raft::copy(res,
+                raft::make_device_vector_view<knowhere_bitset_data_type, knowhere_bitset_indexing_type>(reinterpret_cast<knowhere_bitset_data_type*>(device_bitset->data()), bitset_byte_size),
+                raft::make_host_vector_view(bitset_data, bitset_byte_size));
             if constexpr (index_kind == raft_proto::raft_index_kind::brute_force) {
                 k_tmp += device_bitset->count(res);
                 if (k_tmp == k) {
@@ -488,11 +497,14 @@ struct raft_knowhere_index<IndexKind>::impl {
                                 : std::optional<raft::device_matrix_view<const data_type, input_indexing_type>>{};
 
         if (device_bitset) {
-            raft_index_type::search(
-                res, *index_, search_params, raft::make_const_mdspan(device_data_storage.view()), device_ids,
-                device_distances, config.refine_ratio, input_indexing_type{}, dataset_view,
-                raft::neighbors::filtering::bitset_filter<knowhere_bitset_data_type, knowhere_bitset_indexing_type>{
-                    device_bitset->view()});
+            // TODO(mide): Use const bitmap for bf
+            if constexpr (index_kind != raft_proto::raft_index_kind::brute_force) {
+                raft_index_type::search(
+                    res, *index_, search_params, raft::make_const_mdspan(device_data_storage.view()), device_ids,
+                    device_distances, config.refine_ratio, input_indexing_type{}, dataset_view,
+                    cuvs::neighbors::filtering::bitset_filter<knowhere_bitset_internal_data_type, knowhere_bitset_internal_indexing_type>{
+                        device_bitset->view()});
+            }
         } else {
             raft_index_type::search(res, *index_, search_params, raft::make_const_mdspan(device_data_storage.view()),
                                     device_ids, device_distances, config.refine_ratio, input_indexing_type{},
@@ -576,7 +588,7 @@ struct raft_knowhere_index<IndexKind>::impl {
 
     void
     serialize_to_hnswlib(std::ostream& os) const {
-        // only carga can save to hnswlib format
+        // only cagra can save to hnswlib format
         if constexpr (index_kind == raft_proto::raft_index_kind::cagra) {
             auto scoped_device = raft::device_setter{device_id};
             auto const& res = get_device_resources_without_mempool();
