@@ -364,6 +364,18 @@ class SparseInvertedIndexNode : public IndexNode {
                     new sparse::InvertedIndex<T, uint16_t, sparse::InvertedIndexAlgo::DAAT_WAND, true, mmapped>();
                 index->SetBM25Params(k1, b, avgdl, max_score_ratio);
                 return index;
+            } else if (cfg.inverted_index_algo.value() == "DAAT_BLOCKMAX_WAND") {
+                auto index = new sparse::InvertedIndex<T, uint16_t, sparse::InvertedIndexAlgo::DAAT_BLOCKMAX_WAND, true,
+                                                       mmapped>();
+                index->SetBM25Params(k1, b, avgdl, max_score_ratio);
+                index->SetBlockmaxBlockSize(cfg.blockmax_block_size.value());
+                return index;
+            } else if (cfg.inverted_index_algo.value() == "DAAT_BLOCKMAX_MAXSCORE") {
+                auto index = new sparse::InvertedIndex<T, uint16_t, sparse::InvertedIndexAlgo::DAAT_BLOCKMAX_MAXSCORE,
+                                                       true, mmapped>();
+                index->SetBM25Params(k1, b, avgdl, max_score_ratio);
+                index->SetBlockmaxBlockSize(cfg.blockmax_block_size.value());
+                return index;
             } else if (cfg.inverted_index_algo.value() == "DAAT_MAXSCORE") {
                 auto index =
                     new sparse::InvertedIndex<T, uint16_t, sparse::InvertedIndexAlgo::DAAT_MAXSCORE, true, mmapped>();
@@ -385,6 +397,16 @@ class SparseInvertedIndexNode : public IndexNode {
             } else if (cfg.inverted_index_algo.value() == "DAAT_MAXSCORE") {
                 auto index =
                     new sparse::InvertedIndex<T, T, sparse::InvertedIndexAlgo::DAAT_MAXSCORE, false, mmapped>();
+                return index;
+            } else if (cfg.inverted_index_algo.value() == "DAAT_BLOCKMAX_WAND") {
+                auto index =
+                    new sparse::InvertedIndex<T, T, sparse::InvertedIndexAlgo::DAAT_BLOCKMAX_WAND, false, mmapped>();
+                index->SetBlockmaxBlockSize(cfg.blockmax_block_size.value());
+                return index;
+            } else if (cfg.inverted_index_algo.value() == "DAAT_BLOCKMAX_MAXSCORE") {
+                auto index = new sparse::InvertedIndex<T, T, sparse::InvertedIndexAlgo::DAAT_BLOCKMAX_MAXSCORE, false,
+                                                       mmapped>();
+                index->SetBlockmaxBlockSize(cfg.blockmax_block_size.value());
                 return index;
             } else if (cfg.inverted_index_algo.value() == "TAAT_NAIVE") {
                 auto index = new sparse::InvertedIndex<T, T, sparse::InvertedIndexAlgo::TAAT_NAIVE, false, mmapped>();
