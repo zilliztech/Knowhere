@@ -350,10 +350,6 @@ struct ArrayInvertedLists : InvertedLists {
     const uint8_t* get_codes(size_t list_no) const override;
     const idx_t* get_ids(size_t list_no) const override;
 
-    void restore_codes(const uint8_t* raw_data,
-                       const size_t raw_size,
-                       const bool is_cosine);
-
     const float* get_code_norms(size_t list_no, size_t offset) const override;
     void release_code_norms(size_t list_no, const float* codes) const override;
 

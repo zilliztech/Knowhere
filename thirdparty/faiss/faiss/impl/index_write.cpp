@@ -401,60 +401,6 @@ void write_InvertedLists(const InvertedLists* ils, IOWriter* f) {
     }
 }
 
-// write inverted lists for offset-only index
-void write_InvertedLists_nm(const InvertedLists *ils, IOWriter *f) {
-    if (ils == nullptr) {
-        uint32_t h = fourcc("il00");
-        WRITE1(h);
-    } else if (const auto & ails =
-               dynamic_cast<const ArrayInvertedLists *>(ils)) {
-        uint32_t h = fourcc("ilar");
-        WRITE1(h);
-        WRITE1(ails->nlist);
-        WRITE1(ails->code_size);
-        // here we store either as a full or a sparse data buffer
-        size_t n_non0 = 0;
-        for (size_t i = 0; i < ails->nlist; i++) {
-            if (ails->ids[i].size() > 0)
-                n_non0++;
-        }
-        if (n_non0 > ails->nlist / 2) {
-            uint32_t list_type = fourcc("full");
-            WRITE1(list_type);
-            std::vector<size_t> sizes;
-            for (size_t i = 0; i < ails->nlist; i++) {
-                sizes.push_back (ails->ids[i].size());
-            }
-            WRITEVECTOR(sizes);
-        } else {
-            int list_type = fourcc("sprs"); // sparse
-            WRITE1(list_type);
-            std::vector<size_t> sizes;
-            for (size_t i = 0; i < ails->nlist; i++) {
-                size_t n = ails->ids[i].size();
-                if (n > 0) {
-                    sizes.push_back (i);
-                    sizes.push_back (n);
-                }
-            }
-            WRITEVECTOR(sizes);
-        }
-        // make a single contiguous data buffer (useful for mmapping)
-        for (size_t i = 0; i < ails->nlist; i++) {
-            size_t n = ails->ids[i].size();
-            if (n > 0) {
-                // WRITEANDCHECK (ails->codes[i].data(), n * ails->code_size);
-                WRITEANDCHECK(ails->ids[i].data(), n);
-            }
-        }
-    } else {
-        fprintf(stderr, "WARN! write_InvertedLists: unsupported invlist type, "
-                "saving null invlist\n");
-        uint32_t h = fourcc("il00");
-        WRITE1(h);
-    }
-}
-
 void write_ProductQuantizer(const ProductQuantizer* pq, const char* fname) {
     FileIOWriter writer(fname);
     write_ProductQuantizer(pq, &writer);
@@ -1100,19 +1046,6 @@ void write_index(const Index* idx, FILE* f, int io_flags) {
 void write_index(const Index* idx, const char* fname, int io_flags) {
     FileIOWriter writer(fname);
     write_index(idx, &writer, io_flags);
-}
-
-// write index for offset-only index
-void write_index_nm(const Index *idx, IOWriter *f) {
-    if(const IndexIVFFlat * ivfl =
-              dynamic_cast<const IndexIVFFlat *> (idx)) {
-        uint32_t h = fourcc("IwFl");
-        WRITE1(h);
-        write_ivf_header(ivfl, f);
-        write_InvertedLists_nm(ivfl->invlists, f);
-    } else {
-      FAISS_THROW_MSG("don't know how to serialize this type of index");
-    }
 }
 
 void write_VectorTransform(const VectorTransform* vt, const char* fname) {

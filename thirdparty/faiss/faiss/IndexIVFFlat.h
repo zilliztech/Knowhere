@@ -30,8 +30,6 @@ struct IndexIVFFlat : IndexIVF {
             MetricType = METRIC_L2,
             bool is_cosine = false);
 
-    void restore_codes(const uint8_t* raw_data, const size_t raw_size);
-
     // Be careful with overriding this function, because
     //   renormalized x may be used inside.
     // Overridden by IndexIVFFlatDedup.
