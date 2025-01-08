@@ -621,3 +621,99 @@ TEST_CASE("Test Iterator BruteForce With Sparse Float Vector", "[IP metric]") {
         }
     }
 }
+
+TEST_CASE("Test Scann with data view refiner", "[float metrics]") {
+    using Catch::Approx;
+    if (!faiss::support_pq_fast_scan) {
+        SKIP("pass scann test");
+    }
+    auto version = GenTestVersionList();
+
+    const int64_t nb = 1000, nq = 10;
+    auto metric = GENERATE(as<std::string>{}, knowhere::metric::IP, knowhere::metric::COSINE, knowhere::metric::L2);
+    auto topk = GENERATE(as<int64_t>{}, 10);
+    auto dim = GENERATE(as<int64_t>{}, 120);
+
+    auto base_gen = [=]() {
+        knowhere::Json json;
+        json[knowhere::meta::DIM] = dim;
+        json[knowhere::meta::METRIC_TYPE] = metric;
+        json[knowhere::meta::TOPK] = topk;
+        json[knowhere::meta::RADIUS] = knowhere::IsMetricType(metric, knowhere::metric::L2) ? 10.0 : 0.99;
+        json[knowhere::meta::RANGE_FILTER] = knowhere::IsMetricType(metric, knowhere::metric::L2) ? 0.0 : 1.01;
+        return json;
+    };
+
+    auto scann_gen = [base_gen, topk]() {
+        knowhere::Json json = base_gen();
+        json[knowhere::indexparam::NLIST] = 16;
+        json[knowhere::indexparam::NPROBE] = 14;
+        json[knowhere::indexparam::REFINE_RATIO] = 4.0;
+        json[knowhere::indexparam::SUB_DIM] = 2;
+        json[knowhere::indexparam::WITH_RAW_DATA] = true;
+        return json;
+    };
+
+    auto rand = GENERATE(1, 2);
+    const auto train_ds = GenDataSet(nb, dim, rand);
+    const auto query_ds = GenDataSet(nq, dim, rand + 777);
+
+    const knowhere::Json conf = {
+        {knowhere::meta::METRIC_TYPE, metric},
+        {knowhere::meta::TOPK, topk},
+    };
+    auto gt = knowhere::BruteForce::Search<knowhere::fp32>(train_ds, query_ds, conf, nullptr);
+    knowhere::ViewDataOp data_view = [&train_ds, data_size = sizeof(float) * dim](size_t id) {
+        auto data = train_ds->GetTensor();
+        return (const void*)((const char*)data + data_size * id);
+    };
+    auto data_view_pack = knowhere::Pack(data_view);
+    auto cfg_json = scann_gen().dump();
+    knowhere::Json json = knowhere::Json::parse(cfg_json);
+
+    auto scann_with_dv_refiner =
+        knowhere::IndexFactory::Instance()
+            .Create<knowhere::fp32>(knowhere::IndexEnum::INDEX_FAISS_SCANN_DVR, version, data_view_pack)
+            .value();
+
+    REQUIRE(scann_with_dv_refiner.Type() == knowhere::IndexEnum::INDEX_FAISS_SCANN_DVR);
+    REQUIRE(scann_with_dv_refiner.Build(train_ds, json) == knowhere::Status::success);
+    REQUIRE(scann_with_dv_refiner.Count() == nb);
+    REQUIRE(scann_with_dv_refiner.Size() > 0);
+    REQUIRE(scann_with_dv_refiner.HasRawData(metric) == false);
+    REQUIRE(scann_with_dv_refiner.HasRawData(metric) ==
+            knowhere::IndexStaticFaced<knowhere::fp32>::HasRawData(knowhere::IndexEnum::INDEX_FAISS_SCANN_DVR, version,
+                                                                   cfg_json));
+
+    SECTION("iterator without bitset") {
+        auto scann_with_dv_its = scann_with_dv_refiner.AnnIterator(query_ds, json, nullptr);
+        REQUIRE(scann_with_dv_its.has_value());
+        auto scann_with_ds_iterator_results = GetIteratorKNNResult(scann_with_dv_its.value(), topk);
+
+        auto search_results = scann_with_dv_refiner.Search(query_ds, json, nullptr);
+        bool dist_less_better = knowhere::IsMetricType(metric, knowhere::metric::L2);
+        float recall = GetKNNRelativeRecall(*search_results.value(), *scann_with_ds_iterator_results, dist_less_better);
+        REQUIRE(recall > kKnnRecallThreshold);
+    }
+    SECTION("iterator with bitset") {
+        std::vector<std::function<std::vector<uint8_t>(size_t, size_t)>> gen_bitset_funcs = {
+            GenerateBitsetWithFirstTbitsSet, GenerateBitsetWithRandomTbitsSet};
+        const auto bitset_percentages = {0.4f, 0.98f};
+        for (const float percentage : bitset_percentages) {
+            for (const auto& gen_func : gen_bitset_funcs) {
+                auto bitset_data = gen_func(nb, percentage * nb);
+                knowhere::BitsetView bitset(bitset_data.data(), nb);
+                // Iterator doesn't have a fallback to bruteforce mechanism at high filter rate.
+                auto its = scann_with_dv_refiner.AnnIterator(query_ds, json, bitset);
+                REQUIRE(its.has_value());
+
+                auto iterator_results = GetIteratorKNNResult(its.value(), topk);
+                auto search_results = scann_with_dv_refiner.Search(query_ds, json, bitset);
+                REQUIRE(search_results.has_value());
+                bool dist_less_better = knowhere::IsMetricType(metric, knowhere::metric::L2);
+                float recall = GetKNNRelativeRecall(*search_results.value(), *iterator_results, dist_less_better);
+                REQUIRE(recall > kKnnRecallThreshold);
+            }
+        }
+    }
+}

@@ -33,9 +33,7 @@ CheckNormalizeDataset(int rows, int dim, float diff) {
     auto ds = GenDataSet(rows, dim);
     auto type_ds = knowhere::ConvertToDataTypeIfNeeded<T>(ds);
     auto data = (T*)type_ds->GetTensor();
-
     knowhere::NormalizeDataset<T>(type_ds);
-
     for (int i = 0; i < rows; ++i) {
         float sum = 0.0;
         for (int j = 0; j < dim; ++j) {

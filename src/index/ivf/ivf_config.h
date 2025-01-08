@@ -102,6 +102,7 @@ class ScannConfig : public IvfFlatConfig {
  public:
     CFG_INT reorder_k;
     CFG_BOOL with_raw_data;
+    CFG_INT sub_dim;
     KNOHWERE_DECLARE_CONFIG(ScannConfig) {
         KNOWHERE_CONFIG_DECLARE_FIELD(reorder_k)
             .description("reorder k used for refining")
@@ -113,18 +114,25 @@ class ScannConfig : public IvfFlatConfig {
             .set_default(true)
             .for_static()
             .for_train();
+        KNOWHERE_CONFIG_DECLARE_FIELD(sub_dim)
+            .description("sub dim of each sub dimension space")
+            .set_default(2)
+            .for_train()
+            .set_range(1, 65536);
     }
 
     Status
     CheckAndAdjust(PARAM_TYPE param_type, std::string* err_msg) override {
         switch (param_type) {
             case PARAM_TYPE::TRAIN: {
-                // TODO: handle odd dim with scann
+                // TODO: handle vec_dim % vec_sub_dim != 0 with scann
                 if (dim.has_value()) {
                     int vec_dim = dim.value();
-                    if (vec_dim % 2 != 0) {
-                        std::string msg = "The dimension of a vector (dim) should be a multiple of 2. Dimension:" +
-                                          std::to_string(vec_dim);
+                    int vec_sub_dim = sub_dim.value();
+                    if (vec_dim % vec_sub_dim != 0) {
+                        std::string msg =
+                            "The dimension of a vector (dim) should be a multiple of sub_dim. Dimension:" +
+                            std::to_string(vec_dim) + ", sub_dim:" + std::to_string(vec_sub_dim);
                         return HandleError(err_msg, msg, Status::invalid_args);
                     }
                 }

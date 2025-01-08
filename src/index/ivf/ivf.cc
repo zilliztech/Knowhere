@@ -21,6 +21,7 @@
 #include "faiss/IndexScaNN.h"
 #include "faiss/IndexScalarQuantizer.h"
 #include "faiss/index_io.h"
+#include "index/data_view_dense_index/index_node_with_data_view_refiner.h"
 #include "index/ivf/ivf_config.h"
 #include "io/memory_io.h"
 #include "knowhere/bitsetview_idselector.h"
@@ -558,13 +559,13 @@ IvfIndexNode<DataType, IndexType>::TrainInternal(const DataSetPtr dataset, std::
         bool is_cosine = base_cfg.metric_type.value() == metric::COSINE;
 
         const bool use_elkan = scann_cfg.use_elkan.value_or(true);
-
+        const int sub_dim = scann_cfg.sub_dim.value_or(2);
         // create quantizer for the training
         std::unique_ptr<faiss::IndexFlat> qzr =
             std::make_unique<faiss::IndexFlatElkan>(dim, metric.value(), false, use_elkan);
         // create base index. it does not own qzr
-        auto base_index = std::make_unique<faiss::IndexIVFPQFastScan>(qzr.get(), dim, nlist, (dim + 1) / 2, 4,
-                                                                      is_cosine, metric.value());
+        auto base_index = std::make_unique<faiss::IndexIVFPQFastScan>(
+            qzr.get(), dim, nlist, (dim + sub_dim - 1) / sub_dim, 4, is_cosine, metric.value());
         // create scann index, which does not base_index by default,
         //    but owns the refine index by default omg
         if (scann_cfg.with_raw_data.value()) {
@@ -957,7 +958,6 @@ IvfIndexNode<DataType, IndexType>::AnnIterator(const DataSetPtr dataset, std::un
 
         size_t nprobe = ivf_cfg.nprobe.value();
         // set iterator_refine_ratio = 0.0. If quantizer != flat, faiss:indexivf will not keep raw data;
-        // TODO: if SCANN support Iterator, iterator_refine_ratio should be set.
         float iterator_refine_ratio = 0.0f;
         if constexpr (std::is_same_v<IndexType, faiss::IndexScaNN>) {
             if (HasRawData(ivf_cfg.metric_type.value())) {
@@ -1261,4 +1261,7 @@ KNOWHERE_MOCK_REGISTER_DENSE_FLOAT_ALL_GLOBAL(IVF_SQ8, IvfIndexNode, knowhere::f
 KNOWHERE_MOCK_REGISTER_DENSE_FLOAT_ALL_GLOBAL(IVF_SQ_CC, IvfIndexNode, knowhere::feature::NONE,
                                               faiss::IndexIVFScalarQuantizerCC)
 
+// faiss index + data view refiner combination
+KNOWHERE_SIMPLE_REGISTER_DENSE_FLOAT_ALL_GLOBAL(SCANN_DVR, IndexNodeWithDataViewRefiner, knowhere::feature::NONE,
+                                                IvfIndexNode<fp32, faiss::IndexScaNN>)
 }  // namespace knowhere

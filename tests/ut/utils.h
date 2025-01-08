@@ -249,7 +249,7 @@ GetRelativeLoss(float gt_res, float res) {
 
 inline bool
 CheckDistanceInScope(const knowhere::DataSet& result, int topk, float low_bound, float high_bound) {
-    auto ids = result.GetDistance();
+    auto ids = result.GetIds();
     auto distances = result.GetDistance();
     auto rows = result.GetRows();
     for (int i = 0; i < rows; ++i) {
@@ -267,7 +267,7 @@ CheckDistanceInScope(const knowhere::DataSet& result, int topk, float low_bound,
 
 inline bool
 CheckDistanceInScope(const knowhere::DataSet& result, float low_bound, float high_bound) {
-    auto ids = result.GetDistance();
+    auto ids = result.GetIds();
     auto distances = result.GetDistance();
     auto lims = result.GetLims();
     auto rows = result.GetRows();

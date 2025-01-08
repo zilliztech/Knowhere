@@ -455,8 +455,8 @@ class IndexIterator : public IndexNode::iterator {
         : refine_ratio_(refine_ratio),
           refine_(refine_ratio != 0.0f),
           retain_iterator_order_(retain_iterator_order),
-          use_knowhere_search_pool_(use_knowhere_search_pool),
-          sign_(larger_is_closer ? -1 : 1) {
+          sign_(larger_is_closer ? -1 : 1),
+          use_knowhere_search_pool_(use_knowhere_search_pool) {
     }
 
     std::pair<int64_t, float>
@@ -524,8 +524,16 @@ class IndexIterator : public IndexNode::iterator {
     }
 
  protected:
+    inline size_t
+    min_refine_size() const {
+        // TODO: maybe make this configurable
+        return std::max((size_t)20, (size_t)(res_.size() * refine_ratio_));
+    }
+
     virtual void
-    next_batch(std::function<void(const std::vector<DistId>&)> batch_handler) = 0;
+    next_batch(std::function<void(const std::vector<DistId>&)> batch_handler) {
+        throw std::runtime_error("next_batch not implemented");
+    }
     // will be called only if refine_ratio_ is not 0.
     virtual float
     raw_distance(int64_t) {
@@ -537,18 +545,15 @@ class IndexIterator : public IndexNode::iterator {
 
     const float refine_ratio_;
     const bool refine_;
+    bool initialized_ = false;
+    bool retain_iterator_order_ = false;
+    const int64_t sign_;
 
     std::priority_queue<DistId, std::vector<DistId>, std::greater<DistId>> res_;
     // unused if refine_ is false
     std::priority_queue<DistId, std::vector<DistId>, std::greater<DistId>> refined_res_;
 
  private:
-    inline size_t
-    min_refine_size() const {
-        // TODO: maybe make this configurable
-        return std::max((size_t)20, (size_t)(res_.size() * refine_ratio_));
-    }
-
     void
     UpdateNext() {
         auto batch_handler = [this](const std::vector<DistId>& batch) {
@@ -569,10 +574,7 @@ class IndexIterator : public IndexNode::iterator {
         next_batch(batch_handler);
     }
 
-    bool initialized_ = false;
-    bool retain_iterator_order_ = false;
     bool use_knowhere_search_pool_ = true;
-    const int64_t sign_;
 };
 
 // An iterator implementation that accepts a function to get distances and ids list and returns them in order.

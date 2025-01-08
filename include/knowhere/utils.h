@@ -37,6 +37,14 @@ IsFlatIndex(const knowhere::IndexType& index_type) {
 }
 
 template <typename DataType>
+float
+GetL2Norm(const DataType* x, int32_t d);
+
+template <typename DataType>
+std::vector<float>
+GetL2Norms(const DataType* x, int32_t d, int32_t n);
+
+template <typename DataType>
 extern float
 NormalizeVec(DataType* x, int32_t d);
 
@@ -51,6 +59,10 @@ CopyAndNormalizeVecs(const DataType* x, size_t rows, int32_t dim);
 template <typename DataType>
 extern void
 NormalizeDataset(const DataSetPtr dataset);
+
+template <typename DataType>
+extern std::tuple<DataSetPtr, std::vector<float>>
+CopyAndNormalizeDataset(const DataSetPtr dataset);
 
 constexpr inline uint64_t seed = 0xc70f6907UL;
 
@@ -112,8 +124,10 @@ GetKey(const std::string& name) {
 template <typename InType, typename OutType>
 inline DataSetPtr
 data_type_conversion(const DataSet& src, const std::optional<int64_t> start = std::nullopt,
-                     const std::optional<int64_t> count = std::nullopt) {
-    auto dim = src.GetDim();
+                     const std::optional<int64_t> count = std::nullopt,
+                     const std::optional<int64_t> count_dim = std::nullopt) {
+    auto in_dim = src.GetDim();
+    auto out_dim = count_dim.value_or(in_dim);
     auto rows = src.GetRows();
 
     // check the acceptable range
@@ -128,17 +142,21 @@ data_type_conversion(const DataSet& src, const std::optional<int64_t> start = st
     }
 
     // map
-    auto* des_data = new OutType[dim * count_rows];
+    auto* des_data = new OutType[out_dim * count_rows];
+    std::memset(des_data, 0, sizeof(OutType) * out_dim * count_rows);
     auto* src_data = (const InType*)src.GetTensor();
-    for (auto i = 0; i < dim * count_rows; i++) {
-        des_data[i] = (OutType)src_data[i + start_row * dim];
+    for (auto i = 0; i < count_rows; i++) {
+        for (auto d = 0; d < in_dim; d++) {
+            des_data[i * out_dim + d] = (OutType)src_data[(start_row + i) * in_dim + d];
+        }
     }
 
     auto des = std::make_shared<DataSet>();
     des->SetRows(count_rows);
-    des->SetDim(dim);
+    des->SetDim(out_dim);
     des->SetTensor(des_data);
     des->SetIsOwner(true);
+    des->SetTensorBeginId(src.GetTensorBeginId() + start_row);
     return des;
 }
 
@@ -152,28 +170,30 @@ data_type_conversion(const DataSet& src, const std::optional<int64_t> start = st
 template <typename DataType>
 inline DataSetPtr
 ConvertFromDataTypeIfNeeded(const DataSetPtr& ds, const std::optional<int64_t> start = std::nullopt,
-                            const std::optional<int64_t> count = std::nullopt) {
+                            const std::optional<int64_t> count = std::nullopt,
+                            const std::optional<int64_t> count_dim = std::nullopt) {
     if constexpr (std::is_same_v<DataType, typename MockData<DataType>::type>) {
-        if (!start.has_value() && !count.has_value()) {
+        if (!start.has_value() && !count.has_value() && (!count_dim.has_value() || ds->GetDim() == count_dim.value())) {
             return ds;
         }
     }
 
-    return data_type_conversion<DataType, typename MockData<DataType>::type>(*ds, start, count);
+    return data_type_conversion<DataType, typename MockData<DataType>::type>(*ds, start, count, count_dim);
 }
 
 // Convert DataSet from float to DataType
 template <typename DataType>
 inline DataSetPtr
 ConvertToDataTypeIfNeeded(const DataSetPtr& ds, const std::optional<int64_t> start = std::nullopt,
-                          const std::optional<int64_t> count = std::nullopt) {
+                          const std::optional<int64_t> count = std::nullopt,
+                          const std::optional<int64_t> count_dim = std::nullopt) {
     if constexpr (std::is_same_v<DataType, typename MockData<DataType>::type>) {
-        if (!start.has_value() && !count.has_value()) {
+        if (!start.has_value() && !count.has_value() && (!count_dim.has_value() || ds->GetDim() == count_dim.value())) {
             return ds;
         }
     }
 
-    return data_type_conversion<typename MockData<DataType>::type, DataType>(*ds, start, count);
+    return data_type_conversion<typename MockData<DataType>::type, DataType>(*ds, start, count, count_dim);
 }
 
 template <typename T>

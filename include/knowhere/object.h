@@ -14,6 +14,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <functional>
 #include <iostream>
 #include <memory>
 
@@ -73,10 +74,15 @@ class Object {
     mutable std::atomic_uint32_t ref_counts_ = 1;
 };
 
+using ViewDataOp = std::function<const void*(size_t)>;
+
 template <typename T>
 class Pack : public Object {
-    static_assert(std::is_same_v<T, std::shared_ptr<knowhere::FileManager>>,
-                  "IndexPack only support std::shared_ptr<knowhere::FileManager> by far.");
+    // Currently, DataViewIndex and DiskIndex are mutually exclusive, they can share one object.
+    // todo: pack can hold more object
+    static_assert(std::is_same_v<T, std::shared_ptr<knowhere::FileManager>> || std::is_same_v<T, knowhere::ViewDataOp>,
+                  "IndexPack only support std::shared_ptr<knowhere::FileManager> or ViewDataOp == std::function<const "
+                  "void*(size_t)> by far.");
 
  public:
     Pack() {
