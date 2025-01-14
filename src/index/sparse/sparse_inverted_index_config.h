@@ -24,6 +24,7 @@ class SparseInvertedIndexConfig : public BaseConfig {
     CFG_INT refine_factor;
     CFG_FLOAT wand_bm25_max_score_ratio;
     CFG_STRING inverted_index_algo;
+    CFG_INT blockmax_block_size;
     KNOHWERE_DECLARE_CONFIG(SparseInvertedIndexConfig) {
         // NOTE: drop_ratio_build has been deprecated, it won't change anything
         KNOWHERE_CONFIG_DECLARE_FIELD(drop_ratio_build)
@@ -68,7 +69,7 @@ class SparseInvertedIndexConfig : public BaseConfig {
          *    the recall rate within a certain range.
          */
         KNOWHERE_CONFIG_DECLARE_FIELD(wand_bm25_max_score_ratio)
-            .set_range(0.5, 1.3)
+            .set_range(0.0, 1.3)
             .set_default(1.05)
             .description("ratio to upscale/downscale the max score of each dimension")
             .for_train_and_search()
@@ -77,6 +78,13 @@ class SparseInvertedIndexConfig : public BaseConfig {
         KNOWHERE_CONFIG_DECLARE_FIELD(inverted_index_algo)
             .description("inverted index algorithm")
             .set_default("DAAT_MAXSCORE")
+            .for_train_and_search()
+            .for_deserialize()
+            .for_deserialize_from_file();
+        KNOWHERE_CONFIG_DECLARE_FIELD(blockmax_block_size)
+            .description("block size for blockmax-based algorithms")
+            .set_default(64)
+            .set_range(1, 65535, true, true)
             .for_train_and_search()
             .for_deserialize()
             .for_deserialize_from_file();

@@ -47,7 +47,8 @@ TEST_CASE("Test Mem Sparse Index With Float Vector", "[float metrics]") {
 
     auto metric = GENERATE(knowhere::metric::IP, knowhere::metric::BM25);
 
-    auto inverted_index_algo = GENERATE("TAAT_NAIVE", "DAAT_WAND", "DAAT_MAXSCORE");
+    std::string inverted_index_algo =
+        GENERATE("TAAT_NAIVE", "DAAT_WAND", "DAAT_MAXSCORE", "DAAT_BLOCKMAX_WAND", "DAAT_BLOCKMAX_MAXSCORE");
 
     auto drop_ratio_search = metric == knowhere::metric::BM25 ? GENERATE(0.0, 0.1) : GENERATE(0.0, 0.3);
 
@@ -69,6 +70,9 @@ TEST_CASE("Test Mem Sparse Index With Float Vector", "[float metrics]") {
         knowhere::Json json = base_gen();
         json[knowhere::indexparam::DROP_RATIO_SEARCH] = drop_ratio_search;
         json[knowhere::indexparam::INVERTED_INDEX_ALGO] = inverted_index_algo;
+        if (inverted_index_algo == "DAAT_BLOCKMAX_WAND" || inverted_index_algo == "DAAT_BLOCKMAX_MAXSCORE") {
+            json[knowhere::indexparam::BLOCKMAX_BLOCK_SIZE] = GENERATE(1, 2, 64, 128);
+        }
         return json;
     };
 
@@ -464,7 +468,8 @@ TEST_CASE("Test Mem Sparse Index CC", "[float metrics]") {
 
     auto query_ds = doc_vector_gen(nq, dim);
 
-    auto inverted_index_algo = GENERATE("TAAT_NAIVE", "DAAT_WAND", "DAAT_MAXSCORE");
+    std::string inverted_index_algo =
+        GENERATE("TAAT_NAIVE", "DAAT_WAND", "DAAT_MAXSCORE", "DAAT_BLOCKMAX_WAND", "DAAT_BLOCKMAX_MAXSCORE");
 
     auto drop_ratio_search = GENERATE(0.0, 0.3);
 
@@ -487,6 +492,9 @@ TEST_CASE("Test Mem Sparse Index CC", "[float metrics]") {
         knowhere::Json json = base_gen();
         json[knowhere::indexparam::DROP_RATIO_SEARCH] = drop_ratio_search;
         json[knowhere::indexparam::INVERTED_INDEX_ALGO] = inverted_index_algo;
+        if (inverted_index_algo == "DAAT_BLOCKMAX_WAND" || inverted_index_algo == "DAAT_BLOCKMAX_MAXSCORE") {
+            json[knowhere::indexparam::BLOCKMAX_BLOCK_SIZE] = GENERATE(1, 2, 64, 128);
+        }
         return json;
     };
 
