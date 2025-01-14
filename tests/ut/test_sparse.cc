@@ -144,7 +144,7 @@ TEST_CASE("Test Mem Sparse Index With Float Vector", "[float metrics]") {
                 WriteBinaryToFile(tmp_file, bs.GetByName(idx.Type()));
                 REQUIRE(idx.DeserializeFromFile(tmp_file, json) == knowhere::Status::success);
             } else {
-                REQUIRE(idx.Deserialize(bs, json) == knowhere::Status::success);
+                REQUIRE(idx.Deserialize(std::move(bs), json) == knowhere::Status::success);
             }
 
             auto results = idx.Search(query_ds, json, nullptr);
@@ -381,7 +381,7 @@ TEST_CASE("Test Mem Sparse Index Handle Empty Vector", "[float metrics]") {
         WriteBinaryToFile(tmp_file, bs.GetByName(idx.Type()));
         REQUIRE(idx.DeserializeFromFile(tmp_file, json) == knowhere::Status::success);
     } else {
-        REQUIRE(idx.Deserialize(bs, json) == knowhere::Status::success);
+        REQUIRE(idx.Deserialize(std::move(bs), json) == knowhere::Status::success);
     }
 
     const knowhere::Json conf = {

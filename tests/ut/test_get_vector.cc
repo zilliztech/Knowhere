@@ -82,7 +82,7 @@ TEST_CASE("Test Binary Get Vector By Ids", "[Binary GetVectorByIds]") {
         idx.Serialize(bs);
 
         auto idx_new = knowhere::IndexFactory::Instance().Create<knowhere::bin1>(name, version).value();
-        idx_new.Deserialize(bs);
+        idx_new.Deserialize(std::move(bs));
         REQUIRE(idx.HasRawData(metric_type) ==
                 knowhere::IndexStaticFaced<knowhere::bin1>::HasRawData(name, version, json));
 
@@ -209,7 +209,7 @@ TEST_CASE("Test Float Get Vector By Ids", "[Float GetVectorByIds]") {
         idx.Serialize(bs);
 
         auto idx_new = knowhere::IndexFactory::Instance().Create<knowhere::fp32>(name, version).value();
-        idx_new.Deserialize(bs);
+        idx_new.Deserialize(std::move(bs));
 
         auto retrieve_task = [&]() {
             auto results = idx_new.GetVectorByIds(ids_ds);

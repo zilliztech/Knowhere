@@ -21,6 +21,7 @@
 #include <faiss/utils/distances.h>
 #include <faiss/utils/hamming.h>
 #include <faiss/utils/utils.h>
+#include <faiss/impl/maybe_owned_vector.h>
 
 namespace faiss {
 namespace ivflib {
@@ -187,9 +188,9 @@ SlidingIndexWindow::SlidingIndexWindow(Index* index) : index(index) {
 
 template <class T>
 static void shift_and_add(
-        std::vector<T>& dst,
+        MaybeOwnedVector<T>& dst,
         size_t remove,
-        const std::vector<T>& src) {
+        const MaybeOwnedVector<T>& src) {
     if (remove > 0)
         memmove(dst.data(),
                 dst.data() + remove,
@@ -200,7 +201,7 @@ static void shift_and_add(
 }
 
 template <class T>
-static void remove_from_begin(std::vector<T>& v, size_t remove) {
+static void remove_from_begin(MaybeOwnedVector<T>& v, size_t remove) {
     if (remove > 0)
         v.erase(v.begin(), v.begin() + remove);
 }

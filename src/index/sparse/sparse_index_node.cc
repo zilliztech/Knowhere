@@ -255,7 +255,7 @@ class SparseInvertedIndexNode : public IndexNode {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> config) override {
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> config) override {
         if (index_ != nullptr) {
             LOG_KNOWHERE_WARNING_ << Type() << " has already been created, deleting old";
             DeleteExistingIndex();
@@ -528,7 +528,7 @@ class SparseInvertedIndexNodeCC : public SparseInvertedIndexNode<T, use_wand> {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> config) override {
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> config) override {
         return Status::not_implemented;
     }
 

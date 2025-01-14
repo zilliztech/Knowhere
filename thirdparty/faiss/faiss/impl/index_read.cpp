@@ -48,8 +48,8 @@
 #include <faiss/IndexPreTransform.h>
 #include <faiss/IndexRefine.h>
 #include <faiss/IndexRowwiseMinMax.h>
-#include <faiss/IndexScalarQuantizer.h>
 #include <faiss/IndexScaNN.h>
+#include <faiss/IndexScalarQuantizer.h>
 #include <faiss/MetaIndexes.h>
 #include <faiss/VectorTransform.h>
 
@@ -60,8 +60,9 @@
 #include <faiss/IndexBinaryIVF.h>
 
 // mmap facility
-#include <faiss/impl/maybe_owned_vector.h>
 #include <faiss/impl/mapped_io.h>
+#include <faiss/impl/maybe_owned_vector.h>
+#include <faiss/impl/zerocopy_io.h>
 
 namespace faiss {
 
@@ -88,7 +89,26 @@ bool read_is_mv(const char* fname) {
 }
 
 
-template<typename VectorT>
+template <typename VectorT>
+void read_vector_with_size(VectorT& target, IOReader* f, size_t size) {
+    ZeroCopyIOReader* zr = dynamic_cast<ZeroCopyIOReader*>(f);
+    if (zr != nullptr) {
+        if constexpr (is_maybe_owned_vector_v<VectorT>) {
+            // create a view
+            char* address = nullptr;
+            size_t nread = zr->getDataView(
+                    (void**)&address,
+                    sizeof(typename VectorT::value_type),
+                    size);
+            VectorT view = VectorT::createView(address, nread);
+            target = std::move(view);
+
+            return;
+        }
+    }
+}
+
+template <typename VectorT>
 void read_vector(VectorT& target, IOReader* f) {
     // is it a mmap-enabled reader?
     MappedFileIOReader* mf = dynamic_cast<MappedFileIOReader*>(f);
@@ -114,10 +134,28 @@ void read_vector(VectorT& target, IOReader* f) {
                 size,
                 strerror(errno));
 
-            VectorT mmapped = VectorT::from_mmapped(
-                address, nread, mf->mmap_owner
-            );
-            target = std::move(mmapped);
+            VectorT mmapped_view = VectorT::createView(address, nread);
+            target = std::move(mmapped_view);
+
+            return;
+        }
+    }
+
+    ZeroCopyIOReader* zr = dynamic_cast<ZeroCopyIOReader*>(f);
+    if (zr != nullptr) {
+        if constexpr (is_maybe_owned_vector_v<VectorT>) {
+            // read the size first
+            size_t size = target.size();
+            READANDCHECK(&size, 1);
+
+            // create a view
+            char* address = nullptr;
+            size_t nread = zr->getDataView(
+                    (void**)&address,
+                    sizeof(typename VectorT::value_type),
+                    size);
+            VectorT view = VectorT::createView(address, nread);
+            target = std::move(view);
 
             return;
         }
@@ -142,21 +180,42 @@ void read_xb_vector(VectorT& target, IOReader* f) {
 
             // ok, mmap and check
             char* address = nullptr;
-            const size_t nread = mf->mmap((void**)&address, sizeof(typename VectorT::value_type), size);
+            const size_t nread = mf->mmap(
+                    (void**)&address,
+                    sizeof(typename VectorT::value_type),
+                    size);
 
             FAISS_THROW_IF_NOT_FMT(
-                nread == (size),
-                "read error in %s: %zd != %zd (%s)",
-                f->name.c_str(),
-                nread,
-                size,
-                strerror(errno));
+                    nread == (size),
+                    "read error in %s: %zd != %zd (%s)",
+                    f->name.c_str(),
+                    nread,
+                    size,
+                    strerror(errno));
 
-            VectorT mmapped = VectorT::from_mmapped(
-                address, nread, mf->mmap_owner
-            );
-            target = std::move(mmapped);
+            VectorT mmapped_view = VectorT::createView(address, nread);
+            target = std::move(mmapped_view);
 
+            return;
+        }
+    }
+
+    ZeroCopyIOReader* zr = dynamic_cast<ZeroCopyIOReader*>(f);
+    if (zr != nullptr) {
+        if constexpr (std::is_same_v<VectorT, MaybeOwnedVector<uint8_t>>) {
+            // read the size first
+            size_t size = target.size();
+            READANDCHECK(&size, 1);
+
+            size *= 4;
+
+            char* address = nullptr;
+            size_t nread = zr->getDataView(
+                    (void**)&address,
+                    sizeof(typename VectorT::value_type),
+                    size);
+            VectorT view = VectorT::createView(address, nread);
+            target = std::move(view);
             return;
         }
     }
@@ -164,7 +223,6 @@ void read_xb_vector(VectorT& target, IOReader* f) {
     // the default case
     READXBVECTOR(target);
 }
-
 
 /*************************************************************
  * Read
@@ -373,19 +431,12 @@ InvertedLists* read_InvertedLists(IOReader* f, int io_flags) {
         std::vector<size_t> sizes(ails->nlist);
         read_ArrayInvertedLists_sizes(f, sizes);
         for (size_t i = 0; i < ails->nlist; i++) {
-            ails->ids[i].resize(sizes[i]);
-            ails->codes[i].resize(sizes[i] * ails->code_size);
-            if (ails->with_norm) {
-                ails->code_norms[i].resize(sizes[i]);
-            }
-        }
-        for (size_t i = 0; i < ails->nlist; i++) {
-            size_t n = ails->ids[i].size();
+            size_t n = sizes[i];
             if (n > 0) {
-                READANDCHECK(ails->codes[i].data(), n * ails->code_size);
-                READANDCHECK(ails->ids[i].data(), n);
+                read_vector_with_size(ails->codes[i], f, n * ails->code_size);
+                read_vector_with_size(ails->ids[i], f, n);
                 if (ails->with_norm) {
-                    READANDCHECK(ails->code_norms[i].data(), n);
+                    read_vector_with_size(ails->code_norms[i], f, n);
                 }
             }
         }
@@ -737,7 +788,11 @@ static ArrayInvertedLists* set_array_invlist(
         std::vector<std::vector<idx_t>>& ids) {
     ArrayInvertedLists* ail =
             new ArrayInvertedLists(ivf->nlist, ivf->code_size);
-    std::swap(ail->ids, ids);
+
+    ail->ids.resize(ids.size());
+    for (size_t i = 0; i < ids.size(); i++) {
+        ail->ids[i] = MaybeOwnedVector<idx_t>(std::move(ids[i]));
+    }
     ivf->invlists = ail;
     ivf->own_invlists = true;
     return ail;
@@ -1281,7 +1336,7 @@ Index* read_index(IOReader* f, int io_flags) {
             idxrf = new IndexRefineFlat();
             *idxrf = *idxrf_old;
             delete idxrf_old;
-        } 
+        }
         idxrf->own_fields = true;
         idxrf->own_refine_index = true;
         idx = idxrf;
@@ -1452,7 +1507,11 @@ Index* read_index(FILE* f, int io_flags) {
         // enable mmap-supporting IOReader
         auto owner = std::make_shared<MmappedFileMappingOwner>(f);
         MappedFileIOReader reader(owner);
-        return read_index(&reader, io_flags);
+        Index* index = read_index(&reader, io_flags);
+        if (index != nullptr) {
+            index->mmap_owner = owner;
+        }
+        return index;
     } else {
         FileIOReader reader(f);
         return read_index(&reader, io_flags);
@@ -1464,7 +1523,11 @@ Index* read_index(const char* fname, int io_flags) {
         // enable mmap-supporting IOReader
         auto owner = std::make_shared<MmappedFileMappingOwner>(fname);
         MappedFileIOReader reader(owner);
-        return read_index(&reader, io_flags);
+        Index* index = read_index(&reader, io_flags);
+        if (index != nullptr) {
+            index->mmap_owner = owner;
+        }
+        return index;
     } else {
         FileIOReader reader(fname);
         Index* idx = read_index(&reader, io_flags);

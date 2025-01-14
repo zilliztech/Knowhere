@@ -13,6 +13,8 @@
 
 #include <faiss/impl/io.h>
 
+#include <cstring>
+
 namespace knowhere {
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -159,6 +161,73 @@ struct MemoryIOReader : public faiss::IOReader {
     size_t
     remaining() const {
         return total_ - rp_;
+    }
+};
+
+struct ZeroCopyIOReader : public faiss::IOReader {
+    uint8_t* data_;
+    size_t rp_ = 0;
+    size_t total_ = 0;
+
+    ZeroCopyIOReader(uint8_t* data, size_t size) : data_(data), rp_(0), total_(size) {
+    }
+
+    ~ZeroCopyIOReader() = default;
+
+    size_t
+    getDataView(void** ptr, size_t size, size_t nitems) {
+        if (size == 0) {
+            return nitems;
+        }
+
+        size_t actual_size = size * nitems;
+        if (rp_ + size * nitems > total_) {
+            actual_size = total_ - rp_;
+        }
+
+        size_t actual_nitems = (actual_size + size - 1) / size;
+        if (actual_nitems == 0) {
+            return 0;
+        }
+
+        // get an address
+        *ptr = (void*)(reinterpret_cast<const char*>(data_ + rp_));
+
+        // alter pos
+        rp_ += size * actual_nitems;
+
+        return actual_nitems;
+    }
+
+    size_t
+    operator()(void* ptr, size_t size, size_t nitems) override {
+        if (rp_ >= total_) {
+            return 0;
+        }
+        size_t nremain = (total_ - rp_) / size;
+        if (nremain < nitems) {
+            nitems = nremain;
+        }
+        memcpy(ptr, (data_ + rp_), size * nitems);
+        rp_ += size * nitems;
+        return nitems;
+    }
+
+    template <typename T>
+    size_t
+    read(T* ptr, size_t size, size_t nitems = 1) {
+        auto res = operator()((void*)ptr, size, nitems);
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+        for (size_t i = 0; i < nitems; ++i) {
+            *(ptr + i) = getSwappedBytes(*(ptr + i));
+        }
+#endif
+        return res;
+    }
+
+    int
+    filedescriptor() override {
+        return -1;
     }
 };
 

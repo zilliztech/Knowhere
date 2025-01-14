@@ -237,7 +237,7 @@ TEST_CASE("Test Iterator Mem Index With Float Vector", "[float metrics]") {
 
         knowhere::BinarySet bs;
         REQUIRE(idx.Serialize(bs) == knowhere::Status::success);
-        REQUIRE(idx.Deserialize(bs) == knowhere::Status::success);
+        REQUIRE(idx.Deserialize(std::move(bs)) == knowhere::Status::success);
         auto its = idx.AnnIterator(query_ds, json, nullptr);
         REQUIRE(its.has_value());
 

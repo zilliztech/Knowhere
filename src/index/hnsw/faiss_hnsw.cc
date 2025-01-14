@@ -31,6 +31,7 @@
 #include "faiss/IndexRefine.h"
 #include "faiss/impl/ScalarQuantizer.h"
 #include "faiss/impl/mapped_io.h"
+#include "faiss/impl/zerocopy_io.h"
 #include "faiss/index_io.h"
 #include "index/hnsw/faiss_hnsw_config.h"
 #include "index/hnsw/hnsw.h"
@@ -52,7 +53,6 @@
 #include "knowhere/log.h"
 #include "knowhere/range_util.h"
 #include "knowhere/utils.h"
-
 #if defined(NOT_COMPILE_FOR_SWIG) && !defined(KNOWHERE_WITH_LIGHT)
 #include "knowhere/prometheus_client.h"
 #endif
@@ -201,14 +201,16 @@ class BaseFaissRegularIndexNode : public BaseFaissIndexNode {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> config) override {
-        auto binary = binset.GetByName(Type());
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> config) override {
+        binarySet_ = std::move(binset);
+        auto binary = binarySet_.GetByName(Type());
         if (binary == nullptr) {
             LOG_KNOWHERE_ERROR_ << "Invalid binary set.";
             return Status::invalid_binary_set;
         }
 
-        MemoryIOReader reader(binary->data.get(), binary->size);
+        int io_flags = faiss::IO_FLAG_ZERO_COPY;
+        faiss::ZeroCopyIOReader reader(binary->data.get(), binary->size);
         try {
             // this is a hack for compatibility, faiss index has 4-byte header to indicate index category
             // create a new one to distinguish MV faiss hnsw from faiss hnsw
@@ -1890,11 +1892,11 @@ class HNSWIndexNodeWithFallback : public IndexNode {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> config) override {
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> config) override {
         if (use_base_index) {
-            return base_index->Deserialize(binset, config);
+            return base_index->Deserialize(std::move(binset), config);
         } else {
-            return fallback_search_index->Deserialize(binset, config);
+            return fallback_search_index->Deserialize(std::move(binset), config);
         }
     }
 
