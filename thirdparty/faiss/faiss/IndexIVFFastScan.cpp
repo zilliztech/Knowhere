@@ -1730,7 +1730,6 @@ void IndexIVFFastScan::reconstruct_from_offset(
 void IndexIVFFastScan::reconstruct_orig_invlists() {
     FAISS_THROW_IF_NOT(orig_invlists != nullptr);
     FAISS_THROW_IF_NOT(orig_invlists->list_size(0) == 0);
-
     for (size_t list_no = 0; list_no < nlist; list_no++) {
         InvertedLists::ScopedCodes codes(invlists, list_no);
         InvertedLists::ScopedIds ids(invlists, list_no);

@@ -61,36 +61,6 @@ void IndexRefine::reset() {
     ntotal = 0;
 }
 
-namespace {
-
-using idx_t = faiss::idx_t;
-
-template <class C>
-static void reorder_2_heaps(
-        idx_t n,
-        idx_t k,
-        idx_t* __restrict labels,
-        float* __restrict distances,
-        idx_t k_base,
-        const idx_t* __restrict base_labels,
-        const float* __restrict base_distances) {
-#pragma omp parallel for if (n > 1)
-    for (idx_t i = 0; i < n; i++) {
-        idx_t* idxo = labels + i * k;
-        float* diso = distances + i * k;
-        const idx_t* idxi = base_labels + i * k_base;
-        const float* disi = base_distances + i * k_base;
-
-        heap_heapify<C>(k, diso, idxo, disi, idxi, k);
-        if (k_base != k) { // add remaining elements
-            heap_addn<C>(k, diso, idxo, disi + k, idxi + k, k_base - k);
-        }
-        heap_reorder<C>(k, diso, idxo);
-    }
-}
-
-} // anonymous namespace
-
 void IndexRefine::search(
         idx_t n,
         const float* x,
@@ -194,8 +164,7 @@ void IndexRefine::range_search(
         const float* x,
         float radius,
         RangeSearchResult* result,
-        const SearchParameters* params_in) const
-{
+        const SearchParameters* params_in) const {
     const IndexRefineSearchParameters* params = nullptr;
     if (params_in) {
         params = dynamic_cast<const IndexRefineSearchParameters*>(params_in);
@@ -206,8 +175,7 @@ void IndexRefine::range_search(
     SearchParameters* base_index_params =
             (params != nullptr) ? params->base_index_params : nullptr;
 
-    base_index->range_search(
-            n, x, radius, result, base_index_params);
+    base_index->range_search(n, x, radius, result, base_index_params);
 
 #pragma omp parallel if (n > 1)
     {

@@ -196,5 +196,36 @@ template <>
 struct MockData<knowhere::int8> {
     using type = knowhere::fp32;
 };
+
+//
+enum class DataFormatEnum { fp32, fp16, bf16, int8, bin1 };
+
+template <typename T>
+struct DataType2EnumHelper {};
+
+template <>
+struct DataType2EnumHelper<knowhere::fp32> {
+    static constexpr DataFormatEnum value = DataFormatEnum::fp32;
+};
+template <>
+struct DataType2EnumHelper<knowhere::fp16> {
+    static constexpr DataFormatEnum value = DataFormatEnum::fp16;
+};
+template <>
+struct DataType2EnumHelper<knowhere::bf16> {
+    static constexpr DataFormatEnum value = DataFormatEnum::bf16;
+};
+template <>
+struct DataType2EnumHelper<knowhere::int8> {
+    static constexpr DataFormatEnum value = DataFormatEnum::int8;
+};
+template <>
+struct DataType2EnumHelper<knowhere::bin1> {
+    static constexpr DataFormatEnum value = DataFormatEnum::bin1;
+};
+
+template <typename T>
+static constexpr DataFormatEnum datatype_v = DataType2EnumHelper<T>::value;
+
 }  // namespace knowhere
 #endif /* OPERANDS_H */

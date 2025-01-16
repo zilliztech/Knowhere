@@ -30,6 +30,7 @@ constexpr const char* INDEX_FAISS_IVFFLAT = "IVF_FLAT";
 constexpr const char* INDEX_FAISS_IVFFLAT_CC = "IVF_FLAT_CC";
 constexpr const char* INDEX_FAISS_IVFPQ = "IVF_PQ";
 constexpr const char* INDEX_FAISS_SCANN = "SCANN";
+constexpr const char* INDEX_FAISS_SCANN_DVR = "SCANN_DVR";
 constexpr const char* INDEX_FAISS_IVFSQ8 = "IVF_SQ8";
 constexpr const char* INDEX_FAISS_IVFSQ_CC = "IVF_SQ_CC";
 
@@ -119,7 +120,7 @@ constexpr const char* WITH_RAW_DATA = "with_raw_data";
 constexpr const char* ENSURE_TOPK_FULL = "ensure_topk_full";
 constexpr const char* CODE_SIZE = "code_size";
 constexpr const char* RAW_DATA_STORE_PREFIX = "raw_data_store_prefix";
-
+constexpr const char* SUB_DIM = "sub_dim";
 // RAFT Params
 constexpr const char* REFINE_RATIO = "refine_ratio";
 constexpr const char* CACHE_DATASET_ON_DEVICE = "cache_dataset_on_device";
