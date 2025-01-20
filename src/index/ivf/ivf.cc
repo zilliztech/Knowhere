@@ -20,6 +20,7 @@
 #include "faiss/IndexIVFScalarQuantizerCC.h"
 #include "faiss/IndexScaNN.h"
 #include "faiss/IndexScalarQuantizer.h"
+#include "faiss/impl/zerocopy_io.h"
 #include "faiss/index_io.h"
 #include "index/ivf/ivf_config.h"
 #include "io/memory_io.h"
@@ -162,7 +163,7 @@ class IvfIndexNode : public IndexNode {
         return this->SerializeImpl(binset, typename IndexDispatch<IndexType>::Tag{});
     }
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> cfg) override;
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> cfg) override;
     Status
     DeserializeFromFile(const std::string& filename, std::shared_ptr<Config> cfg) override;
 
@@ -1172,17 +1173,18 @@ IvfIndexNode<DataType, IndexType>::SerializeImpl(BinarySet& binset, IVFFlatTag) 
 
 template <typename DataType, typename IndexType>
 Status
-IvfIndexNode<DataType, IndexType>::Deserialize(const BinarySet& binset, std::shared_ptr<Config> cfg) {
+IvfIndexNode<DataType, IndexType>::Deserialize(BinarySet&& binset, std::shared_ptr<Config> cfg) {
     std::vector<std::string> names = {"IVF",        // compatible with knowhere-1.x
                                       "BinaryIVF",  // compatible with knowhere-1.x
                                       Type()};
-    auto binary = binset.GetByNames(names);
+    binarySet_ = std::move(binset);
+    auto binary = binarySet_.GetByNames(names);
     if (binary == nullptr) {
         LOG_KNOWHERE_ERROR_ << "Invalid binary set.";
         return Status::invalid_binary_set;
     }
-
-    MemoryIOReader reader(binary->data.get(), binary->size);
+    int io_flags = faiss::IO_FLAG_ZERO_COPY;
+    faiss::ZeroCopyIOReader reader(binary->data.get(), binary->size);
     try {
         if constexpr (std::is_same<IndexType, faiss::IndexIVFFlat>::value) {
             if (this->version_ <= Version::GetMinimalVersion()) {
@@ -1193,11 +1195,11 @@ IvfIndexNode<DataType, IndexType>::Deserialize(const BinarySet& binset, std::sha
                 reader.data_ = binary->data.get();
                 reader.total_ = binary->size;
             }
-            index_.reset(static_cast<faiss::IndexIVFFlat*>(faiss::read_index(&reader)));
+            index_.reset(static_cast<faiss::IndexIVFFlat*>(faiss::read_index(&reader, io_flags)));
         } else if constexpr (std::is_same<IndexType, faiss::IndexBinaryIVF>::value) {
-            index_.reset(static_cast<IndexType*>(faiss::read_index_binary(&reader)));
+            index_.reset(static_cast<IndexType*>(faiss::read_index_binary(&reader, io_flags)));
         } else {
-            index_.reset(static_cast<IndexType*>(faiss::read_index(&reader)));
+            index_.reset(static_cast<IndexType*>(faiss::read_index(&reader, io_flags)));
         }
         if constexpr (!std::is_same_v<IndexType, faiss::IndexScaNN> &&
                       !std::is_same_v<IndexType, faiss::IndexIVFScalarQuantizerCC>) {

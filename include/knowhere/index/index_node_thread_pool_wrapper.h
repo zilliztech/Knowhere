@@ -60,8 +60,8 @@ class IndexNodeThreadPoolWrapper : public IndexNode {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> cfg) override {
-        return index_node_->Deserialize(binset, std::move(cfg));
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> cfg) override {
+        return index_node_->Deserialize(std::move(binset), std::move(cfg));
     }
 
     Status

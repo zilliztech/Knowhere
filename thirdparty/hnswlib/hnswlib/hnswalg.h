@@ -937,7 +937,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
     }
 
     void
-    loadIndex(knowhere::MemoryIOReader& input, size_t max_elements_i = 0) {
+    loadIndex(knowhere::ZeroCopyIOReader& input, size_t max_elements_i = 0) {
         using knowhere::readBinaryPOD;
         // linxj: init with metrictype
         size_t dim;
@@ -998,17 +998,12 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
         readBinaryPOD(input, mult_);
         readBinaryPOD(input, ef_construction_);
 
-        data_level0_memory_ = (char*)malloc(max_elements * size_data_per_element_);  // NOLINT
-        if (data_level0_memory_ == nullptr)
-            throw std::runtime_error("Not enough memory: loadIndex failed to allocate level0");
-        input.read(data_level0_memory_, cur_element_count * size_data_per_element_);
+
+        input.getDataView(reinterpret_cast<void **>(&data_level0_memory_), size_data_per_element_, cur_element_count);
 
         // for COSINE, need load data_norm_l2_
         if (metric_type_ == Metric::COSINE) {
-            data_norm_l2_ = (float*)malloc(max_elements * sizeof(float));  // NOLINT
-            if (data_norm_l2_ == nullptr)
-                throw std::runtime_error("Not enough memory: loadIndex failed to allocate level0");
-            input.read(data_norm_l2_, cur_element_count * sizeof(float));
+            input.getDataView(reinterpret_cast<void **>(data_norm_l2_), sizeof(float), cur_element_count);
         }
 
         size_links_per_element_ = maxM_ * sizeof(tableint) + sizeof(linklistsizeint);
@@ -1017,9 +1012,6 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
 
         visited_list_pool_ = new VisitedListPool(max_elements);
 
-        linkLists_ = (char**)malloc(sizeof(void*) * max_elements);
-        if (linkLists_ == nullptr)
-            throw std::runtime_error("Not enough memory: loadIndex failed to allocate linklists");
         element_levels_ = std::vector<int>(max_elements);
         revSize_ = 1.0 / mult_;
         ef_ = 10;
@@ -1031,10 +1023,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
                 linkLists_[i] = nullptr;
             } else {
                 element_levels_[i] = linkListSize / size_links_per_element_;
-                linkLists_[i] = (char*)malloc(linkListSize);
-                if (linkLists_[i] == nullptr)
-                    throw std::runtime_error("Not enough memory: loadIndex failed to allocate linklist");
-                input.read(linkLists_[i], linkListSize);
+                input.getDataView(reinterpret_cast<void **>(&linkLists_[i]), sizeof(char), linkListSize);
             }
         }
     }

@@ -131,7 +131,7 @@ class GpuFlatIndexNode : public IndexNode {
     }
 
     Status
-    Deserialize(const BinarySet& binset, const Config& config) override {
+    Deserialize(BinarySet&& binset, const Config& config) override {
         auto binary = binset.GetByName(Type());
         if (binary == nullptr) {
             LOG_KNOWHERE_ERROR_ << "Invalid binary set.";

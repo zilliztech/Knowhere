@@ -183,7 +183,7 @@ class Index {
     Serialize(BinarySet& binset) const;
 
     Status
-    Deserialize(const BinarySet& binset, const Json& json = {});
+    Deserialize(BinarySet&& binset, const Json& json = {});
 
     Status
     DeserializeFromFile(const std::string& filename, const Json& json = {});

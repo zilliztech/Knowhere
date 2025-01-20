@@ -180,7 +180,7 @@ struct GpuRaftIndexNode : public IndexNode {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config>) override {
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config>) override {
         auto result = Status::success;
         std::stringbuf buf;
         auto binary = binset.GetByName(this->Type());

@@ -23,6 +23,7 @@
 #include <vector>
 
 #include <faiss/MetricType.h>
+#include <faiss/impl/maybe_owned_vector.h>
 
 namespace faiss {
 
@@ -338,11 +339,11 @@ struct InvertedLists {
 
 /// simple (default) implementation as an array of inverted lists
 struct ArrayInvertedLists : InvertedLists {
-    std::vector<std::vector<uint8_t>> codes; // binary codes, size nlist
-    std::vector<std::vector<idx_t>> ids;     ///< Inverted lists for indexes
+    std::vector<MaybeOwnedVector<uint8_t>> codes; // binary codes, size nlist
+    std::vector<MaybeOwnedVector<idx_t>> ids;     ///< Inverted lists for indexes
 
     bool with_norm = false;
-    std::vector<std::vector<float>> code_norms; // code norms
+    std::vector<MaybeOwnedVector<float>> code_norms; // code norms
 
     ArrayInvertedLists(size_t nlist, size_t code_size, bool with_norm = false);
 

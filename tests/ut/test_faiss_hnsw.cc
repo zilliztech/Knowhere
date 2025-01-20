@@ -184,7 +184,7 @@ read_index(knowhere::Index<knowhere::IndexNode>& index, const std::string& filen
         binary_set.Append(name, data_ptr, data_size);
     }
 
-    index.Deserialize(binary_set, conf);
+    index.Deserialize(std::move(binary_set), conf);
 }
 
 template <typename T>

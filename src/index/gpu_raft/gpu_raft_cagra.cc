@@ -122,7 +122,7 @@ class GpuRaftCagraHybridIndexNode : public GpuRaftCagraIndexNode<DataType> {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> cfg) override {
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> cfg) override {
         if (binset.Contains(std::string(this->Type()) + "_cpu")) {
             this->adapt_for_cpu = true;
             auto binary = binset.GetByName(std::string(this->Type() + "_cpu"));
@@ -147,7 +147,7 @@ class GpuRaftCagraHybridIndexNode : public GpuRaftCagraIndexNode<DataType> {
             return Status::success;
         }
 
-        return GpuRaftCagraIndexNode<DataType>::Deserialize(binset, std::move(cfg));
+        return GpuRaftCagraIndexNode<DataType>::Deserialize(std::move(binset), std::move(cfg));
     }
 
     Status

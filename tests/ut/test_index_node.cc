@@ -90,7 +90,7 @@ class BaseFlatIndexNode : public IndexNode {
     }
 
     virtual Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> config) override {
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> config) override {
         LOG_KNOWHERE_INFO_ << "BaseFlatIndexNode::Deserialize()";
         return Status::success;
     }
@@ -152,7 +152,7 @@ TEST_CASE("Test index node") {
         REQUIRE(index.HasRawData(metric::L2) == true);
         REQUIRE(index.GetIndexMeta({}).error() == Status::not_implemented);
         REQUIRE(index.Serialize(binset) == Status::success);
-        REQUIRE(index.Deserialize(binset, {}) == Status::success);
+        REQUIRE(index.Deserialize(std::move(binset), {}) == Status::success);
         REQUIRE(index.DeserializeFromFile("", {}) == Status::success);
         REQUIRE(index.Dim() == 0);
         REQUIRE(index.Size() == 0);
@@ -173,7 +173,7 @@ TEST_CASE("Test index node") {
         REQUIRE(index.HasRawData(metric::L2) == true);
         REQUIRE(index.GetIndexMeta({}).error() == Status::not_implemented);
         REQUIRE(index.Serialize(binset) == Status::success);
-        REQUIRE(index.Deserialize(binset, {}) == Status::success);
+        REQUIRE(index.Deserialize(std::move(binset), {}) == Status::success);
         REQUIRE(index.DeserializeFromFile("", {}) == Status::success);
         REQUIRE(index.Dim() == 0);
         REQUIRE(index.Size() == 0);
@@ -195,7 +195,7 @@ TEST_CASE("Test index node") {
         REQUIRE(index.HasRawData(metric::L2) == true);
         REQUIRE(index.GetIndexMeta({}).error() == Status::not_implemented);
         REQUIRE(index.Serialize(binset) == Status::success);
-        REQUIRE(index.Deserialize(binset, {}) == Status::success);
+        REQUIRE(index.Deserialize(std::move(binset), {}) == Status::success);
         REQUIRE(index.DeserializeFromFile("", {}) == Status::success);
         REQUIRE(index.Dim() == 0);
         REQUIRE(index.Size() == 0);

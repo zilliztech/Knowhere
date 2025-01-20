@@ -90,7 +90,7 @@ class DiskANNIndexNode : public IndexNode {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> cfg) override;
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> cfg) override;
 
     Status
     DeserializeFromFile(const std::string& filename, std::shared_ptr<Config> config) override {
@@ -385,7 +385,7 @@ DiskANNIndexNode<DataType>::Build(const DataSetPtr dataset, std::shared_ptr<Conf
 
 template <typename DataType>
 Status
-DiskANNIndexNode<DataType>::Deserialize(const BinarySet& binset, std::shared_ptr<Config> cfg) {
+DiskANNIndexNode<DataType>::Deserialize(BinarySet&& binset, std::shared_ptr<Config> cfg) {
     std::lock_guard<std::mutex> lock(preparation_lock_);
     auto prep_conf = static_cast<const DiskANNConfig&>(*cfg);
     if (!CheckMetric(prep_conf.metric_type.value())) {

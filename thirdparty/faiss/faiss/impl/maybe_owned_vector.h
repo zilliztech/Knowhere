@@ -14,11 +14,12 @@ struct MappingOwner {
 };
 
 // a container that either works as std::vector<T> that owns its own memory, 
-//    or as a mapped pointer owned by someone third-party owner
+//    or as a view of a memory buffer, with a known size
 template<typename T>
 struct MaybeOwnedVector {
     using value_type = T;
     using self_type = MaybeOwnedVector<T>;
+    using vec_iterator = typename std::vector<T>::const_iterator;
 
     bool is_owned = true;
 
@@ -26,14 +27,13 @@ struct MaybeOwnedVector {
     std::vector<T> owned_data;
 
     // these three are used if is_owned == false
-    T* mapped_data = nullptr;
+    T* view_data = nullptr;
     // the number of T elements
-    size_t mapped_size = 0;
-    std::shared_ptr<MappingOwner> mapping_owner;
+    size_t view_size = 0;
 
-    // points either to mapped_data, or to owned.data()
+    // points either to view_data, or to owned.data()
     T* c_ptr = nullptr;
-    // uses either mapped_size, or owned.size();
+    // uses either view_size, or owned.size();
     size_t c_size = 0; 
 
     MaybeOwnedVector() = default;
@@ -49,16 +49,15 @@ struct MaybeOwnedVector {
         is_owned = other.is_owned;
         owned_data = other.owned_data;
 
-        mapped_data = other.mapped_data;
-        mapped_size = other.mapped_size;
-        mapping_owner = other.mapping_owner;
+        view_data = other.view_data;
+        view_size = other.view_size;
 
         if (is_owned) {
             c_ptr = owned_data.data();
             c_size = owned_data.size();
         } else {
-            c_ptr = mapped_data;
-            c_size = mapped_size;
+            c_ptr = view_data;
+            c_size = view_size;
         }
     }
 
@@ -66,16 +65,15 @@ struct MaybeOwnedVector {
         is_owned = other.is_owned;
         owned_data = std::move(other.owned_data);
 
-        mapped_data = other.mapped_data;
-        mapped_size = other.mapped_size;
-        mapping_owner = std::move(other.mapping_owner);
+        view_data = other.view_data;
+        view_size = other.view_size;
 
         if (is_owned) {
             c_ptr = owned_data.data();
             c_size = owned_data.size();
         } else {
-            c_ptr = mapped_data;
-            c_size = mapped_size;
+            c_ptr = view_data;
+            c_size = view_size;
         }
     }
 
@@ -113,19 +111,16 @@ struct MaybeOwnedVector {
         c_size = owned_data.size();
     }
 
-    static MaybeOwnedVector from_mmapped(
+    static MaybeOwnedVector createView(
         void* address, 
-        const size_t n_mapped_elements,
-        const std::shared_ptr<MappingOwner>& owner
-    ) {
+        const size_t n_mapped_elements) {
         MaybeOwnedVector vec;
         vec.is_owned = false;
-        vec.mapped_data = reinterpret_cast<T*>(address);
-        vec.mapped_size = n_mapped_elements;
-        vec.mapping_owner = owner;
+        vec.view_data = reinterpret_cast<T*>(address);
+        vec.view_size = n_mapped_elements;
         
-        vec.c_ptr = vec.mapped_data;
-        vec.c_size = vec.mapped_size;
+        vec.c_ptr = vec.view_data;
+        vec.c_size = vec.view_size;
 
         return vec;
     }
@@ -150,8 +145,26 @@ struct MaybeOwnedVector {
         return c_ptr[idx];
     }
 
+    vec_iterator begin() const {
+        FAISS_ASSERT_MSG(is_owned, "This operation cannot be performed on a viewed vector");
+
+        return owned_data.begin();
+    }
+
+    vec_iterator end() const  {
+        FAISS_ASSERT_MSG(is_owned, "This operation cannot be performed on a viewed vector");
+
+        return owned_data.end();
+    }
+
+    vec_iterator erase(vec_iterator begin, vec_iterator end) {
+        FAISS_ASSERT_MSG(is_owned, "This operation cannot be performed on a viewed vector");
+
+        return owned_data.erase(begin, end);
+    }
+
     void clear() {
-        FAISS_ASSERT_MSG(is_owned, "This operation cannot be performed on a memory-mapped vector");
+        FAISS_ASSERT_MSG(is_owned, "This operation cannot be performed on a viewed vector");
 
         owned_data.clear();
         c_ptr = owned_data.data();
@@ -159,7 +172,7 @@ struct MaybeOwnedVector {
     }
 
     void resize(const size_t new_size) {
-        FAISS_ASSERT_MSG(is_owned, "This operation cannot be performed on a memory-mapped vector");
+        FAISS_ASSERT_MSG(is_owned, "This operation cannot be performed on a viewed vector");
 
         owned_data.resize(new_size);
         c_ptr = owned_data.data();
@@ -167,7 +180,7 @@ struct MaybeOwnedVector {
     }
 
     void resize(const size_t new_size, const value_type v) {
-        FAISS_ASSERT_MSG(is_owned, "This operation cannot be performed on a memory-mapped vector");
+        FAISS_ASSERT_MSG(is_owned, "This operation cannot be performed on a viewed vector");
 
         owned_data.resize(new_size, v);
         c_ptr = owned_data.data();
@@ -177,12 +190,20 @@ struct MaybeOwnedVector {
     friend void swap(self_type& a, self_type& b) {
         std::swap(a.is_owned, b.is_owned);
         std::swap(a.owned_data, b.owned_data);
-        std::swap(a.mapped_data, b.mapped_data);
-        std::swap(a.mapped_size, b.mapped_size);
-        std::swap(a.mapping_owner, b.mapping_owner);
+        std::swap(a.view_data, b.view_data);
+        std::swap(a.view_size, b.view_size);
         std::swap(a.c_ptr, b.c_ptr);
         std::swap(a.c_size, b.c_size);
     }
 };
+
+template<typename T>
+struct is_maybe_owned_vector : std::false_type {};
+
+template<typename T>
+struct is_maybe_owned_vector<MaybeOwnedVector<T>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool is_maybe_owned_vector_v = is_maybe_owned_vector<T>::value;
 
 }
