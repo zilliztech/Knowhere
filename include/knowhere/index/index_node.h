@@ -350,7 +350,7 @@ class IndexNode : public Object {
     HasRawData(const std::string& metric_type) const = 0;
 
     virtual bool
-    IsAdditionalScalarSupported() const {
+    IsAdditionalScalarSupported(bool is_mv_only) const {
         return false;
     }
 

@@ -68,8 +68,11 @@ class BaseFaissIndexNode : public IndexNode {
     }
 
     bool
-    IsAdditionalScalarSupported() const override {
-        return true;
+    IsAdditionalScalarSupported(bool is_mv_only) const override {
+        if (is_mv_only) {
+            return true;
+        }
+        return false;
     }
 
     //
@@ -1845,11 +1848,11 @@ class HNSWIndexNodeWithFallback : public IndexNode {
     }
 
     bool
-    IsAdditionalScalarSupported() const override {
+    IsAdditionalScalarSupported(bool is_mv_only) const override {
         if (use_base_index) {
-            return base_index->IsAdditionalScalarSupported();
+            return base_index->IsAdditionalScalarSupported(is_mv_only);
         } else {
-            return fallback_search_index->IsAdditionalScalarSupported();
+            return fallback_search_index->IsAdditionalScalarSupported(is_mv_only);
         }
     }
 

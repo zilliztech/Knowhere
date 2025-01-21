@@ -277,8 +277,8 @@ Index<T>::HasRawData(const std::string& metric_type) const {
 
 template <typename T>
 inline bool
-Index<T>::IsAdditionalScalarSupported() const {
-    return this->node->IsAdditionalScalarSupported();
+Index<T>::IsAdditionalScalarSupported(bool is_mv_only) const {
+    return this->node->IsAdditionalScalarSupported(is_mv_only);
 }
 
 template <typename T>

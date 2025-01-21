@@ -174,7 +174,7 @@ class Index {
     HasRawData(const std::string& metric_type) const;
 
     bool
-    IsAdditionalScalarSupported() const;
+    IsAdditionalScalarSupported(bool is_mv_only) const;
 
     expected<DataSetPtr>
     GetIndexMeta(const Json& json) const;
