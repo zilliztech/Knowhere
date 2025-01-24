@@ -24,6 +24,7 @@ class SparseInvertedIndexConfig : public BaseConfig {
     CFG_INT refine_factor;
     CFG_FLOAT dim_max_score_ratio;
     CFG_STRING inverted_index_algo;
+    CFG_INT blockmax_block_size;
     KNOHWERE_DECLARE_CONFIG(SparseInvertedIndexConfig) {
         // NOTE: drop_ratio_build has been deprecated, it won't change anything
         KNOWHERE_CONFIG_DECLARE_FIELD(drop_ratio_build)
@@ -87,18 +88,26 @@ class SparseInvertedIndexConfig : public BaseConfig {
             .for_train()
             .for_deserialize()
             .for_deserialize_from_file();
+        KNOWHERE_CONFIG_DECLARE_FIELD(blockmax_block_size)
+            .description("block size for blockmax-based algorithms")
+            .set_default(64)
+            .set_range(1, 65535, true, true)
+            .for_train_and_search()
+            .for_deserialize()
+            .for_deserialize_from_file();
     }
 
     Status
     CheckAndAdjust(PARAM_TYPE param_type, std::string* err_msg) override {
         if (param_type == PARAM_TYPE::TRAIN) {
-            constexpr std::array<std::string_view, 3> legal_inverted_index_algo_list{"TAAT_NAIVE", "DAAT_WAND",
-                                                                                     "DAAT_MAXSCORE"};
+            constexpr std::array<std::string_view, 5> legal_inverted_index_algo_list{
+                "TAAT_NAIVE", "DAAT_WAND", "DAAT_MAXSCORE", "DAAT_BLOCKMAX_WAND", "DAAT_BLOCKMAX_MAXSCORE"};
             std::string inverted_index_algo_str = inverted_index_algo.value_or("");
             if (std::find(legal_inverted_index_algo_list.begin(), legal_inverted_index_algo_list.end(),
                           inverted_index_algo_str) == legal_inverted_index_algo_list.end()) {
                 std::string msg = "sparse inverted index algo " + inverted_index_algo_str +
-                                  " not found or not supported, supported: [TAAT_NAIVE DAAT_WAND DAAT_MAXSCORE]";
+                                  " not found or not supported, supported: [TAAT_NAIVE DAAT_WAND DAAT_MAXSCORE "
+                                  "DAAT_BLOCKMAX_WAND DAAT_BLOCKMAX_MAXSCORE]";
                 return HandleError(err_msg, msg, Status::invalid_args);
             }
         }

@@ -391,6 +391,16 @@ class GrowableVectorView {
         return reinterpret_cast<const T*>(mmap_data_)[i];
     }
 
+    T&
+    back() {
+        return reinterpret_cast<T*>(mmap_data_)[size() - 1];
+    }
+
+    const T&
+    back() const {
+        return reinterpret_cast<const T*>(mmap_data_)[size() - 1];
+    }
+
     class iterator : public boost::iterator_facade<iterator, T, boost::random_access_traversal_tag, T&> {
      public:
         iterator() = default;
