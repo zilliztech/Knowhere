@@ -211,7 +211,7 @@ TEST_CASE("Test Mem Index With Float Vector", "[float metrics]") {
                 json["enable_mmap"] = true;
                 REQUIRE(idx.DeserializeFromFile(kMmapIndexPath, json) == knowhere::Status::success);
             } else {
-                REQUIRE(idx.Deserialize(bs, json) == knowhere::Status::success);
+                REQUIRE(idx.Deserialize(std::move(bs), json) == knowhere::Status::success);
             }
 
             // TODO: qianya (IVFSQ_CC deserialize casted from the IVFSQ directly, which will cause the hasRawData
@@ -275,7 +275,7 @@ TEST_CASE("Test Mem Index With Float Vector", "[float metrics]") {
 
         knowhere::BinarySet bs;
         REQUIRE(idx.Serialize(bs) == knowhere::Status::success);
-        REQUIRE(idx.Deserialize(bs, json) == knowhere::Status::success);
+        REQUIRE(idx.Deserialize(std::move(bs), json) == knowhere::Status::success);
 
         auto results = idx.RangeSearch(query_ds, json, nullptr);
         REQUIRE(results.has_value());
@@ -490,7 +490,7 @@ TEST_CASE("Test Mem Index With Float Vector", "[float metrics]") {
         idx.Serialize(bs);
 
         auto idx_ = knowhere::IndexFactory::Instance().Create<knowhere::fp32>(name, version).value();
-        idx_.Deserialize(bs);
+        idx_.Deserialize(std::move(bs));
         auto results = idx_.Search(query_ds, json, nullptr);
         REQUIRE(results.has_value());
     }
@@ -641,7 +641,7 @@ TEST_CASE("Test Mem Index With Binary Vector", "[float metrics]") {
         idx.Serialize(bs);
 
         auto idx_ = knowhere::IndexFactory::Instance().Create<knowhere::bin1>(name, version).value();
-        idx_.Deserialize(bs);
+        idx_.Deserialize(std::move(bs));
         auto results = idx_.Search(query_ds, json, nullptr);
         REQUIRE(results.has_value());
     }

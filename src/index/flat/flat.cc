@@ -13,6 +13,7 @@
 #include "faiss/IndexBinaryFlat.h"
 #include "faiss/IndexFlat.h"
 #include "faiss/impl/AuxIndexStructures.h"
+#include "faiss/impl/zerocopy_io.h"
 #include "faiss/index_io.h"
 #include "index/flat/flat_config.h"
 #include "io/memory_io.h"
@@ -313,23 +314,25 @@ class FlatIndexNode : public IndexNode {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config>) override {
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config>) override {
         std::vector<std::string> names = {"IVF",        // compatible with knowhere-1.x
                                           "BinaryIVF",  // compatible with knowhere-1.x
                                           Type()};
-        auto binary = binset.GetByNames(names);
+        binarySet_ = std::move(binset);
+        auto binary = binarySet_.GetByNames(names);
         if (binary == nullptr) {
             LOG_KNOWHERE_ERROR_ << "Invalid binary set.";
             return Status::invalid_binary_set;
         }
 
-        MemoryIOReader reader(binary->data.get(), binary->size);
+        int io_flags = faiss::IO_FLAG_ZERO_COPY;
+        faiss::ZeroCopyIOReader reader(binary->data.get(), binary->size);
         if constexpr (std::is_same<IndexType, faiss::IndexFlat>::value) {
-            faiss::Index* index = faiss::read_index(&reader);
+            faiss::Index* index = faiss::read_index(&reader, io_flags);
             index_.reset(static_cast<IndexType*>(index));
         }
         if constexpr (std::is_same<IndexType, faiss::IndexBinaryFlat>::value) {
-            faiss::IndexBinary* index = faiss::read_index_binary(&reader);
+            faiss::IndexBinary* index = faiss::read_index_binary(&reader, io_flags);
             index_.reset(static_cast<IndexType*>(index));
         }
         return Status::success;

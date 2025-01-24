@@ -15,6 +15,7 @@
 #include <sstream>
 #include <string>
 #include <typeinfo>
+#include "faiss/impl/mapped_io.h"
 
 #define FAISS_VERSION_MAJOR 1
 #define FAISS_VERSION_MINOR 8
@@ -80,6 +81,8 @@ struct Index {
     /// type of metric this index uses for search
     MetricType metric_type;
     float metric_arg; ///< argument of the metric type
+
+    std::shared_ptr<MmappedFileMappingOwner> mmap_owner;
 
     explicit Index(idx_t d = 0, MetricType metric = METRIC_L2)
             : d(d),

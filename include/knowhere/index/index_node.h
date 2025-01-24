@@ -385,7 +385,7 @@ class IndexNode : public Object {
      * its release.
      */
     virtual Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config> config) = 0;
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config> config) = 0;
 
     /**
      * @brief Deserializes the index from a file.
@@ -437,6 +437,7 @@ class IndexNode : public Object {
     }
 
  protected:
+    BinarySet binarySet_;
     Version version_;
 };
 

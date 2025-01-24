@@ -253,7 +253,7 @@ class IndexWrap {
     knowhere::Status
     Deserialize(knowhere::BinarySetPtr binset, const std::string& json) {
         GILReleaser rel;
-        return idx.value().Deserialize(*binset, knowhere::Json::parse(json));
+        return idx.value().Deserialize(std::move(*binset), knowhere::Json::parse(json));
     }
 
     knowhere::Status

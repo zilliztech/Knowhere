@@ -301,7 +301,7 @@ Index<T>::Serialize(BinarySet& binset) const {
 
 template <typename T>
 inline Status
-Index<T>::Deserialize(const BinarySet& binset, const Json& json) {
+Index<T>::Deserialize(BinarySet&& binset, const Json& json) {
     Json json_(json);
     auto cfg = this->node->CreateConfig();
     {
@@ -318,12 +318,12 @@ Index<T>::Deserialize(const BinarySet& binset, const Json& json) {
 
 #if defined(NOT_COMPILE_FOR_SWIG) && !defined(KNOWHERE_WITH_LIGHT)
     TimeRecorder rc("Load index", 2);
-    res = this->node->Deserialize(binset, std::move(cfg));
+    res = this->node->Deserialize(std::move(binset), std::move(cfg));
     auto time = rc.ElapseFromBegin("done");
     time *= 0.001;  // convert to ms
     knowhere_load_latency.Observe(time);
 #else
-    res = this->node->Deserialize(binset, std::move(cfg));
+    res = this->node->Deserialize(std::move(binset), std::move(cfg));
 #endif
     return res;
 }

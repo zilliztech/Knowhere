@@ -485,18 +485,19 @@ class HnswIndexNode : public IndexNode {
     }
 
     Status
-    Deserialize(const BinarySet& binset, std::shared_ptr<Config>) override {
+    Deserialize(BinarySet&& binset, std::shared_ptr<Config>) override {
         if (index_) {
             delete index_;
         }
         try {
-            auto binary = binset.GetByName(Type());
+            binarySet_ = std::move(binset);
+            auto binary = binarySet_.GetByName(Type());
             if (binary == nullptr) {
                 LOG_KNOWHERE_ERROR_ << "Invalid binary set.";
                 return Status::invalid_binary_set;
             }
 
-            MemoryIOReader reader(binary->data.get(), binary->size);
+            ZeroCopyIOReader reader(binary->data.get(), binary->size);
 
             hnswlib::SpaceInterface<DistType>* space = nullptr;
             index_ = new (std::nothrow) hnswlib::HierarchicalNSW<DataType, DistType, quant_type>(space);

@@ -167,7 +167,7 @@ TEST_CASE("Invalid diskann params test", "[diskann]") {
             knowhere::IndexFactory::Instance().Create<knowhere::fp32>("DISKANN", version, diskann_index_pack).value();
         diskann.Build(ds_ptr, test_gen());
         diskann.Serialize(binarySet);
-        diskann.Deserialize(binarySet, test_gen());
+        diskann.Deserialize(std::move(binarySet), test_gen());
 
         knowhere::Json test_json;
         auto query_ds = GenDataSet(kNumQueries, kDim, 42);
@@ -304,7 +304,7 @@ base_search() {
             // knn search
             auto diskann =
                 knowhere::IndexFactory::Instance().Create<DataType>("DISKANN", version, diskann_index_pack).value();
-            diskann.Deserialize(binset, deserialize_json);
+            diskann.Deserialize(std::move(binset), deserialize_json);
             REQUIRE(diskann.HasRawData(metric_str) ==
                     knowhere::IndexStaticFaced<DataType>::HasRawData("DISKANN", version, json));
 
@@ -324,7 +324,7 @@ base_search() {
                 }
                 auto diskann_tmp =
                     knowhere::IndexFactory::Instance().Create<DataType>("DISKANN", version, diskann_index_pack).value();
-                diskann_tmp.Deserialize(binset, deserialize_json);
+                diskann_tmp.Deserialize(std::move(binset), deserialize_json);
                 auto knn_search_json = knn_search_gen().dump();
                 knowhere::Json knn_json = knowhere::Json::parse(knn_search_json);
                 auto res = diskann_tmp.Search(query_ds, knn_json, nullptr);
@@ -430,7 +430,7 @@ TEST_CASE("Test DiskANN GetVectorByIds", "[diskann]") {
                 auto index = knowhere::IndexFactory::Instance()
                                  .Create<knowhere::fp32>("DISKANN", version, diskann_index_pack)
                                  .value();
-                auto ret = index.Deserialize(binset, deserialize_json);
+                auto ret = index.Deserialize(std::move(binset), deserialize_json);
                 REQUIRE(ret == knowhere::Status::success);
 
                 REQUIRE(diskann.HasRawData(knowhere::metric::L2) ==
