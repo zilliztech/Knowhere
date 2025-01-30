@@ -31,6 +31,7 @@
 #include <raft/core/resource/cuda_stream.hpp>
 #include <raft/core/resource/thrust_policy.hpp>
 #include <raft/core/serialize.hpp>
+#include <raft/linalg/normalize.cuh>
 
 #include <tuple>
 #include <type_traits>
@@ -119,9 +120,9 @@ using raft_search_params_t = typename detail::raft_index_type_mapper<true, Index
 metric_string_to_cuvs_distance_type(std::string const& metric_string) {
     auto result = cuvs::distance::DistanceType::L2Expanded;
     if (metric_string == "L2") {
-        result = raft::distance::DistanceType::L2Expanded;
+        result = cuvs::distance::DistanceType::L2Expanded;
     } else if (metric_string == "COSINE") {
-        result = raft::distance::DistanceType::InnerProduct;
+        result = cuvs::distance::DistanceType::InnerProduct;
     } else if (metric_string == "L2SqrtExpanded") {
         result = cuvs::distance::DistanceType::L2SqrtExpanded;
     } else if (metric_string == "CosineExpanded") {
@@ -501,13 +502,11 @@ struct raft_knowhere_index<IndexKind>::impl {
             // type to make them compatible.
             auto bitset_view = device_bitset->view();
             bitset_view.set_original_nbits(sizeof(knowhere_bitset_data_type) * 8);
-            if constexpr (index_kind != raft_proto::raft_index_kind::brute_force) {
-                raft_index_type::search(
-                    res, *index_, search_params, raft::make_const_mdspan(device_data_storage.view()), device_ids,
-                    device_distances, config.refine_ratio, input_indexing_type{}, dataset_view,
-                    cuvs::neighbors::filtering::bitset_filter<knowhere_bitset_internal_data_type, knowhere_bitset_internal_indexing_type>{
-                        device_bitset});
-            }
+            raft_index_type::search(
+                res, *index_, search_params, raft::make_const_mdspan(device_data_storage.view()), device_ids,
+                device_distances, config.refine_ratio, input_indexing_type{}, dataset_view,
+                cuvs::neighbors::filtering::bitset_filter<knowhere_bitset_internal_data_type, knowhere_bitset_internal_indexing_type>{
+                    bitset_view});
         } else {
             raft_index_type::search(res, *index_, search_params, raft::make_const_mdspan(device_data_storage.view()),
                                     device_ids, device_distances, config.refine_ratio, input_indexing_type{},
