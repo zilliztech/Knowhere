@@ -24,8 +24,8 @@ namespace knowhere {
 
 bool
 checkGpuAvailable(const std::string& name) {
-    if (name == "GPU_RAFT_BRUTE_FORCE" || name == "GPU_BRUTE_FORCE" || name == "GPU_RAFT_CAGRA" ||
-        name == "GPU_CAGRA" || name == "GPU_RAFT_IVF_FLAT" || name == "GPU_IVF_FLAT" || name == "GPU_RAFT_IVF_PQ" ||
+    if (name == "GPU_CUVS_BRUTE_FORCE" || name == "GPU_BRUTE_FORCE" || name == "GPU_CUVS_CAGRA" ||
+        name == "GPU_CAGRA" || name == "GPU_CUVS_IVF_FLAT" || name == "GPU_IVF_FLAT" || name == "GPU_CUVS_IVF_PQ" ||
         name == "GPU_IVF_PQ") {
         int count = 0;
         auto status = cudaGetDeviceCount(&count);

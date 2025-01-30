@@ -234,7 +234,7 @@ class Benchmark_float : public Benchmark_knowhere, public ::testing::Test {
     }
 #endif
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
     template <typename T>
     void
     test_raft_cagra(const knowhere::Json& cfg) {
@@ -279,7 +279,7 @@ class Benchmark_float : public Benchmark_knowhere, public ::testing::Test {
         knowhere::KnowhereConfig::SetSearchThreadPoolSize(default_search_thread_num);
         printf("faiss::distance_compute_blas_threshold: %ld\n", knowhere::KnowhereConfig::GetBlasThreshold());
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
         knowhere::KnowhereConfig::SetRaftMemPool();
 #endif
     }
@@ -540,9 +540,9 @@ TEST_F(Benchmark_float, TEST_DISKANN) {
 }
 #endif
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
 TEST_F(Benchmark_float, TEST_RAFT_BRUTE_FORCE) {
-    index_type_ = knowhere::IndexEnum::INDEX_RAFT_BRUTEFORCE;
+    index_type_ = knowhere::IndexEnum::INDEX_CUVS_BRUTEFORCE;
 
     std::string index_file_name;
     knowhere::Json conf = cfg_;
@@ -552,7 +552,7 @@ TEST_F(Benchmark_float, TEST_RAFT_BRUTE_FORCE) {
 }
 
 TEST_F(Benchmark_float, TEST_RAFT_IVF_FLAT) {
-    index_type_ = knowhere::IndexEnum::INDEX_RAFT_IVFFLAT;
+    index_type_ = knowhere::IndexEnum::INDEX_CUVS_IVFFLAT;
 
     std::string index_file_name;
     knowhere::Json conf = cfg_;
@@ -565,7 +565,7 @@ TEST_F(Benchmark_float, TEST_RAFT_IVF_FLAT) {
 }
 
 TEST_F(Benchmark_float, TEST_RAFT_IVF_PQ) {
-    index_type_ = knowhere::IndexEnum::INDEX_RAFT_IVFPQ;
+    index_type_ = knowhere::IndexEnum::INDEX_CUVS_IVFPQ;
 
     std::string index_file_name;
     knowhere::Json conf = cfg_;
@@ -582,7 +582,7 @@ TEST_F(Benchmark_float, TEST_RAFT_IVF_PQ) {
 }
 
 TEST_F(Benchmark_float, TEST_RAFT_CAGRA) {
-    index_type_ = knowhere::IndexEnum::INDEX_RAFT_CAGRA;
+    index_type_ = knowhere::IndexEnum::INDEX_CUVS_CAGRA;
 
     std::string index_file_name;
     knowhere::Json conf = cfg_;

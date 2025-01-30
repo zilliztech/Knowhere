@@ -233,13 +233,13 @@ struct GpuRaftIndexNode : public IndexNode {
     std::string
     Type() const override {
         if constexpr (index_kind == raft_proto::raft_index_kind::brute_force) {
-            return knowhere::IndexEnum::INDEX_RAFT_BRUTEFORCE;
+            return knowhere::IndexEnum::INDEX_CUVS_BRUTEFORCE;
         } else if constexpr (index_kind == raft_proto::raft_index_kind::ivf_flat) {
-            return knowhere::IndexEnum::INDEX_RAFT_IVFFLAT;
+            return knowhere::IndexEnum::INDEX_CUVS_IVFFLAT;
         } else if constexpr (index_kind == raft_proto::raft_index_kind::ivf_pq) {
-            return knowhere::IndexEnum::INDEX_RAFT_IVFPQ;
+            return knowhere::IndexEnum::INDEX_CUVS_IVFPQ;
         } else if constexpr (index_kind == raft_proto::raft_index_kind::cagra) {
-            return knowhere::IndexEnum::INDEX_RAFT_CAGRA;
+            return knowhere::IndexEnum::INDEX_CUVS_CAGRA;
         }
     }
 

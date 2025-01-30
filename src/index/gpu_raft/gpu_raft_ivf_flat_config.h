@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef GPU_RAFT_IVF_FLAT_CONFIG_H
-#define GPU_RAFT_IVF_FLAT_CONFIG_H
+#ifndef GPU_CUVS_IVF_FLAT_CONFIG_H
+#define GPU_CUVS_IVF_FLAT_CONFIG_H
 
 #include "common/raft/integration/raft_knowhere_config.hpp"
 #include "common/raft/proto/raft_index_kind.hpp"
@@ -91,4 +91,4 @@ to_raft_knowhere_config(GpuRaftIvfFlatConfig const& cfg) {
 
 }  // namespace knowhere
 
-#endif /*GPU_RAFT_IVF_FLAT_CONFIG_H*/
+#endif /*GPU_CUVS_IVF_FLAT_CONFIG_H*/

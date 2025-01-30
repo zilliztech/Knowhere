@@ -199,10 +199,10 @@ TEST_CASE("Test index has raw data", "[IndexHasRawData]") {
         // gpu index
 
 #ifdef KNOWHERE_WITH_CUVS
-        CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_RAFT_BRUTEFORCE, ver, {}));
-        CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_RAFT_IVFFLAT, ver, {}));
-        CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_RAFT_IVFPQ, ver, {}));
-        CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_RAFT_CAGRA, ver, {}));
+        CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_CUVS_BRUTEFORCE, ver, {}));
+        CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_CUVS_IVFFLAT, ver, {}));
+        CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_CUVS_IVFPQ, ver, {}));
+        CHECK_FALSE(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_CUVS_CAGRA, ver, {}));
 #endif
         // sparse index
         CHECK(knowhere::IndexStaticFaced<fp32>::HasRawData(IndexEnum::INDEX_SPARSE_INVERTED_INDEX, ver, {}));
@@ -268,10 +268,10 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
         REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_FAISS_SCANN, knowhere::feature::MMAP));
 
 #ifdef KNOWHERE_WITH_CUVS
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::MMAP));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::MMAP));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::MMAP));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_CAGRA, knowhere::feature::MMAP));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_BRUTEFORCE, knowhere::feature::MMAP));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFFLAT, knowhere::feature::MMAP));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFPQ, knowhere::feature::MMAP));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_CAGRA, knowhere::feature::MMAP));
 #endif
 #ifdef KNOWHERE_WITH_DISKANN
 #ifdef KNOWHERE_WITH_CARDINAL
@@ -288,10 +288,10 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
 
     SECTION("Check GPU") {
 #ifdef KNOWHERE_WITH_CUVS
-        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::GPU));
-        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::GPU));
-        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::GPU));
-        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_CAGRA, knowhere::feature::GPU));
+        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_BRUTEFORCE, knowhere::feature::GPU));
+        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFFLAT, knowhere::feature::GPU));
+        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFPQ, knowhere::feature::GPU));
+        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_CAGRA, knowhere::feature::GPU));
 #endif
 
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_FAISS_IDMAP, knowhere::feature::GPU));
@@ -400,34 +400,34 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
 
         // GPU Indexes
 #ifdef KNOWHERE_WITH_CUVS
-        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::FLOAT32));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::FP16));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::BF16));
+        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_BRUTEFORCE, knowhere::feature::FLOAT32));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_BRUTEFORCE, knowhere::feature::FP16));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_BRUTEFORCE, knowhere::feature::BF16));
         REQUIRE_FALSE(
-            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::BINARY));
+            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_BRUTEFORCE, knowhere::feature::BINARY));
         REQUIRE_FALSE(
-            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::SPARSE_FLOAT32));
+            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_BRUTEFORCE, knowhere::feature::SPARSE_FLOAT32));
 
-        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::FLOAT32));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::FP16));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::BF16));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::BINARY));
+        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFFLAT, knowhere::feature::FLOAT32));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFFLAT, knowhere::feature::FP16));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFFLAT, knowhere::feature::BF16));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFFLAT, knowhere::feature::BINARY));
         REQUIRE_FALSE(
-            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::SPARSE_FLOAT32));
+            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFFLAT, knowhere::feature::SPARSE_FLOAT32));
 
-        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::FLOAT32));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::FP16));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::BF16));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::BINARY));
+        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFPQ, knowhere::feature::FLOAT32));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFPQ, knowhere::feature::FP16));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFPQ, knowhere::feature::BF16));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFPQ, knowhere::feature::BINARY));
         REQUIRE_FALSE(
-            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::SPARSE_FLOAT32));
+            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFPQ, knowhere::feature::SPARSE_FLOAT32));
 
-        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_CAGRA, knowhere::feature::FLOAT32));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_CAGRA, knowhere::feature::FP16));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_CAGRA, knowhere::feature::BF16));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_CAGRA, knowhere::feature::BINARY));
+        REQUIRE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_CAGRA, knowhere::feature::FLOAT32));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_CAGRA, knowhere::feature::FP16));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_CAGRA, knowhere::feature::BF16));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_CAGRA, knowhere::feature::BINARY));
         REQUIRE_FALSE(
-            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_CAGRA, knowhere::feature::SPARSE_FLOAT32));
+            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_CAGRA, knowhere::feature::SPARSE_FLOAT32));
 #endif
 
         // DiskANN Index
@@ -470,11 +470,11 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
 
 #ifdef KNOWHERE_WITH_CUVS
         REQUIRE_FALSE(
-            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::NO_TRAIN));
+            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_BRUTEFORCE, knowhere::feature::NO_TRAIN));
         REQUIRE_FALSE(
-            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::NO_TRAIN));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::NO_TRAIN));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_CAGRA, knowhere::feature::NO_TRAIN));
+            IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFFLAT, knowhere::feature::NO_TRAIN));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFPQ, knowhere::feature::NO_TRAIN));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_CAGRA, knowhere::feature::NO_TRAIN));
 #endif
 
 #ifdef KNOWHERE_WITH_DISKANN
@@ -513,10 +513,10 @@ TEST_CASE("Test index feature check", "[IndexFeatureCheck]") {
         REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_SPARSE_WAND, knowhere::feature::MV));
 
 #ifdef KNOWHERE_WITH_CUVS
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_BRUTEFORCE, knowhere::feature::MV));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFFLAT, knowhere::feature::MV));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_IVFPQ, knowhere::feature::MV));
-        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_RAFT_CAGRA, knowhere::feature::MV));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_BRUTEFORCE, knowhere::feature::MV));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFFLAT, knowhere::feature::MV));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_IVFPQ, knowhere::feature::MV));
+        REQUIRE_FALSE(IndexFactory::Instance().FeatureCheck(IndexEnum::INDEX_CUVS_CAGRA, knowhere::feature::MV));
 #endif
     }
 }

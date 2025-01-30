@@ -160,7 +160,7 @@ class GpuRaftCagraHybridIndexNode : public GpuRaftCagraIndexNode<DataType> {
     std::unique_ptr<hnswlib::HierarchicalNSW<DataType, float, hnswlib::None>> hnsw_index_ = nullptr;
 };
 
-KNOWHERE_REGISTER_GLOBAL_WITH_THREAD_POOL(GPU_RAFT_CAGRA, GpuRaftCagraHybridIndexNode, fp32,
+KNOWHERE_REGISTER_GLOBAL_WITH_THREAD_POOL(GPU_CUVS_CAGRA, GpuRaftCagraHybridIndexNode, fp32,
                                           knowhere::feature::GPU_ANN_FLOAT_INDEX, []() {
                                               int count;
                                               RAFT_CUDA_TRY(cudaGetDeviceCount(&count));
