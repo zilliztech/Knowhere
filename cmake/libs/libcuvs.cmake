@@ -16,7 +16,7 @@
 add_definitions(-DKNOWHERE_WITH_CUVS)
 set(CUVS_VERSION "${RAPIDS_VERSION}")
 set(CUVS_FORK "rapidsai")
-set(CUVS_PINNED_TAG "branch-24.12")
+set(CUVS_PINNED_TAG "branch-25.02")
 
 rapids_find_package(CUDAToolkit REQUIRED BUILD_EXPORT_SET knowhere-exports
                     INSTALL_EXPORT_SET knowhere-exports)

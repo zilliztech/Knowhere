@@ -497,13 +497,16 @@ struct raft_knowhere_index<IndexKind>::impl {
                                 : std::optional<raft::device_matrix_view<const data_type, input_indexing_type>>{};
 
         if (device_bitset) {
-            // TODO(mide): Use const bitmap for bf
+            // cuVS is using uint32_t as filter datatype. Set the original nbits to knowhere's bitset data
+            // type to make them compatible.
+            auto bitset_view = device_bitset->view();
+            bitset_view.set_original_nbits(sizeof(knowhere_bitset_data_type) * 8);
             if constexpr (index_kind != raft_proto::raft_index_kind::brute_force) {
                 raft_index_type::search(
                     res, *index_, search_params, raft::make_const_mdspan(device_data_storage.view()), device_ids,
                     device_distances, config.refine_ratio, input_indexing_type{}, dataset_view,
                     cuvs::neighbors::filtering::bitset_filter<knowhere_bitset_internal_data_type, knowhere_bitset_internal_indexing_type>{
-                        device_bitset->view()});
+                        device_bitset});
             }
         } else {
             raft_index_type::search(res, *index_, search_params, raft::make_const_mdspan(device_data_storage.view()),

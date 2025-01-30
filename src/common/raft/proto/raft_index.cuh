@@ -28,6 +28,8 @@
 #include <istream>
 #include <optional>
 #include <ostream>
+#include <raft/core/bitmap.cuh>
+#include <raft/core/bitset.cuh>
 #include <raft/core/logger.hpp>
 #include <raft/core/copy.cuh>
 #include <cuvs/neighbors/brute_force.hpp>
@@ -41,7 +43,7 @@
 
 namespace raft_proto {
 
-auto static const RAFT_NAME = raft::RAFT_NAME;
+auto static const RAFT_NAME = "RAFT";
 
 namespace detail {
 template <raft_index_kind index_kind, template <typename...> typename index_template>
@@ -107,7 +109,7 @@ post_filter(raft::resources const& res, filter_lambda_t const& sample_filter, in
             auto index = thrust::get<0>(index_id_distance);
             auto& id = thrust::get<1>(index_id_distance);
             auto& distance = thrust::get<2>(index_id_distance);
-            if (!sample_filter(index / index_mdspan.extent(1), id)) {
+            if (!sample_filter.bitset_view_.test(index / index_mdspan.extent(1), id)) {
                 id = std::numeric_limits<std::remove_reference_t<decltype(id)>>::max();
                 distance = std::numeric_limits<std::remove_reference_t<decltype(distance)>>::max();
             }
@@ -234,7 +236,7 @@ struct raft_index {
     }();
 
     using index_params_type = std::conditional_t<
-        vector_index_kind == raft_index_kind::brute_force, cuvs::neighbors::index_params, // Generic index params for BF
+        vector_index_kind == raft_index_kind::brute_force, cuvs::neighbors::brute_force::index_params,
         std::conditional_t<
             vector_index_kind == raft_index_kind::ivf_flat, cuvs::neighbors::ivf_flat::index_params,
             std::conditional_t<
@@ -243,7 +245,7 @@ struct raft_index {
                                    // Should never get here; precluded by static assertion above
                                    cuvs::neighbors::index_params>>>>;
     using search_params_type = std::conditional_t<
-        vector_index_kind == raft_index_kind::brute_force, cuvs::neighbors::search_params, // Generic search params for BF
+        vector_index_kind == raft_index_kind::brute_force, cuvs::neighbors::brute_force::search_params,
         std::conditional_t<
             vector_index_kind == raft_index_kind::ivf_flat, cuvs::neighbors::ivf_flat::search_params,
             std::conditional_t<
@@ -273,12 +275,8 @@ struct raft_index {
     auto static build(raft::resources const& res, index_params_type const& index_params, DataMdspanT data) {
         if constexpr (std::is_same_v<DataMdspanT, raft::host_matrix_view<T const, IdxT>>) {
             if constexpr (vector_index_kind == raft_index_kind::brute_force) {
-                auto dataset_dev_storage = raft::make_device_matrix<T, int64_t>(res, data.extent(0), data.extent(1));
-                raft::copy(res, dataset_dev_storage.view(), data);
                 return raft_index<underlying_index_type, raft_index_args...>{
-                    // TODO(mide): Switch back to host build
-                    cuvs::neighbors::brute_force::build(res, dataset_dev_storage.view(), index_params.metric, index_params.metric_arg)};
-                    //cuvs::neighbors::brute_force::index<T, IdxT>(res, data, std::nullopt, index_params.metric, index_params.metric_arg)};
+                    cuvs::neighbors::brute_force::build(res, index_params, data)};
             } else if constexpr (vector_index_kind == raft_index_kind::cagra) {
                 return raft_index<underlying_index_type, raft_index_args...>{
                     cuvs::neighbors::cagra::build(res, index_params, data)};
@@ -358,8 +356,6 @@ struct raft_index {
                     cuvs::neighbors::refine(res, *dataset, queries, raft::make_const_mdspan(neighbors_tmp), neighbors,
                                             distances, underlying_index.metric());
                 } else {
-                    // https://github.com/rapidsai/raft/issues/1950
-                    /* TODO(mide): Uncomment this block
                     cuvs::neighbors::refine(
                         res,
                         raft::make_device_matrix_view(dataset->data_handle(), InputIdxT(dataset->extent(0)),
@@ -373,7 +369,6 @@ struct raft_index {
                         raft::make_device_matrix_view(distances.data_handle(), InputIdxT(distances.extent(0)),
                                                       InputIdxT(distances.extent(1))),
                         underlying_index.metric());
-                        */
                 }
             } else {
                 RAFT_LOG_WARN("Refinement requested, but no dataset provided. Ignoring refinement request.");
