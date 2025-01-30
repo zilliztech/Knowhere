@@ -109,7 +109,8 @@ post_filter(raft::resources const& res, filter_lambda_t const& sample_filter, in
             auto index = thrust::get<0>(index_id_distance);
             auto& id = thrust::get<1>(index_id_distance);
             auto& distance = thrust::get<2>(index_id_distance);
-            if (!sample_filter.bitset_view_.test(index / index_mdspan.extent(1), id)) {
+            //if (!sample_filter(index / index_mdspan.extent(1), id)) {
+            if (!sample_filter.bitset_view_.test(id)) {
                 id = std::numeric_limits<std::remove_reference_t<decltype(id)>>::max();
                 distance = std::numeric_limits<std::remove_reference_t<decltype(distance)>>::max();
             }
