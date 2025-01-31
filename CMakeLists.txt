@@ -22,12 +22,12 @@ include(cmake/utils/utils.cmake)
 include(cmake/utils/compile_flags.cmake)
 include(cmake/utils/platform_check.cmake)
 
-knowhere_option(WITH_RAFT "Build with RAFT indexes" OFF)
-if(WITH_RAFT)
+knowhere_option(WITH_CUVS "Build with CUVS indexes" OFF)
+if(WITH_CUVS)
   set(CMAKE_CUDA_ARCHITECTURES RAPIDS)
   include(cmake/libs/librapids.cmake)
   project(knowhere CXX C CUDA)
-  include(cmake/libs/libraft.cmake)
+  include(cmake/libs/libcuvs.cmake)
 endif()
 
 knowhere_option(WITH_UT "Build with UT test" OFF)
@@ -100,7 +100,7 @@ include_directories(${folly_INCLUDE_DIRS})
 find_package(nlohmann_json REQUIRED)
 find_package(glog REQUIRED)
 find_package(prometheus-cpp REQUIRED)
-if(NOT WITH_RAFT)
+if(NOT WITH_CUVS)
   find_package(fmt REQUIRED)
 endif()
 if(NOT WITH_LIGHT)
@@ -171,10 +171,10 @@ knowhere_file_glob(GLOB_RECURSE KNOWHERE_GPU_SRCS src/index/gpu/flat_gpu/*.cc
                    src/index/gpu/ivf_gpu/*.cc)
 list(REMOVE_ITEM KNOWHERE_SRCS ${KNOWHERE_GPU_SRCS})
 
-if(NOT WITH_RAFT)
-  knowhere_file_glob(GLOB_RECURSE KNOWHERE_RAFT_SRCS src/common/raft/*.cu
+if(NOT WITH_CUVS)
+  knowhere_file_glob(GLOB_RECURSE KNOWHERE_CUVS_SRCS src/common/raft/*.cu
                      src/common/raft/*.cc src/index/gpu_raft/*.cc)
-  list(REMOVE_ITEM KNOWHERE_SRCS ${KNOWHERE_RAFT_SRCS})
+  list(REMOVE_ITEM KNOWHERE_SRCS ${KNOWHERE_CUVS_SRCS})
 endif()
 
 include_directories(src)
@@ -203,12 +203,16 @@ endif()
 
 add_library(knowhere SHARED ${KNOWHERE_SRCS})
 add_dependencies(knowhere ${KNOWHERE_LINKER_LIBS})
-if(WITH_RAFT)
+if(WITH_CUVS)
   list(
     APPEND
     KNOWHERE_LINKER_LIBS
     raft::raft
-    raft::compiled_static
+    raft::raft_logger
+    raft::raft_logger_impl
+    rmm::rmm_logger
+    rmm::rmm_logger_impl
+    cuvs::cuvs
     CUDA::cublas
     CUDA::cusparse
     CUDA::cusolver)

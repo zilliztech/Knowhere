@@ -52,7 +52,7 @@ TEST_CASE("Knowhere global config", "[init]") {
     REQUIRE(knowhere::KnowhereConfig::SetAioContextPool(16));
 #endif
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
     knowhere::KnowhereConfig::SetRaftMemPool(1LL << 10, 2LL << 10);
 #endif
 }

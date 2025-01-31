@@ -14,16 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#undef RAFT_EXPLICIT_INSTANTIATE_ONLY
 #include "common/raft/integration/raft_knowhere_index.cuh"
-#include "common/raft/proto/filtered_search_instantiation.cuh"
 #include "common/raft/proto/raft_index_kind.hpp"
-
-RAFT_FILTERED_SEARCH_EXTERN(cagra, raft_knowhere::raft_data_t<raft_proto::raft_index_kind::cagra>,
-                            raft_knowhere::raft_indexing_t<raft_proto::raft_index_kind::cagra>,
-                            raft_knowhere::raft_input_indexing_t<raft_proto::raft_index_kind::cagra>,
-                            raft_knowhere::raft_data_t<raft_proto::raft_index_kind::cagra>,
-                            raft_knowhere::knowhere_bitset_data_type, raft_knowhere::knowhere_bitset_indexing_type)
 
 namespace raft_knowhere {
 template struct raft_knowhere_index<raft_proto::raft_index_kind::cagra>;

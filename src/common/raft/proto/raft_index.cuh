@@ -28,43 +28,39 @@
 #include <istream>
 #include <optional>
 #include <ostream>
+#include <raft/core/bitmap.cuh>
+#include <raft/core/bitset.cuh>
 #include <raft/core/logger.hpp>
-#include <raft/neighbors/brute_force.cuh>
-#include <raft/neighbors/brute_force_serialize.cuh>
-#include <raft/neighbors/brute_force_types.hpp>
-#include <raft/neighbors/cagra.cuh>
-#include <raft/neighbors/cagra_serialize.cuh>
-#include <raft/neighbors/cagra_types.hpp>
-#include <raft/neighbors/ivf_flat.cuh>
-#include <raft/neighbors/ivf_flat_serialize.cuh>
-#include <raft/neighbors/ivf_flat_types.hpp>
-#include <raft/neighbors/ivf_pq.cuh>
-#include <raft/neighbors/ivf_pq_serialize.cuh>
-#include <raft/neighbors/ivf_pq_types.hpp>
+#include <raft/core/copy.cuh>
+#include <cuvs/neighbors/brute_force.hpp>
+#include <cuvs/neighbors/cagra.hpp>
+#include <cuvs/neighbors/ivf_flat.hpp>
+#include <cuvs/neighbors/ivf_pq.hpp>
+#include <cuvs/neighbors/refine.hpp>
 #include <type_traits>
 
 #include "common/raft/proto/raft_index_kind.hpp"
 
 namespace raft_proto {
 
-auto static const RAFT_NAME = raft::RAFT_NAME;
+auto static const RAFT_NAME = "RAFT";
 
 namespace detail {
 template <raft_index_kind index_kind, template <typename...> typename index_template>
 struct template_matches_index_kind : std::false_type {};
 
 template <>
-struct template_matches_index_kind<raft_index_kind::brute_force, raft::neighbors::brute_force::index> : std::true_type {
+struct template_matches_index_kind<raft_index_kind::brute_force, cuvs::neighbors::brute_force::index> : std::true_type {
 };
 
 template <>
-struct template_matches_index_kind<raft_index_kind::ivf_flat, raft::neighbors::ivf_flat::index> : std::true_type {};
+struct template_matches_index_kind<raft_index_kind::ivf_flat, cuvs::neighbors::ivf_flat::index> : std::true_type {};
 
 template <>
-struct template_matches_index_kind<raft_index_kind::ivf_pq, raft::neighbors::ivf_pq::index> : std::true_type {};
+struct template_matches_index_kind<raft_index_kind::ivf_pq, cuvs::neighbors::ivf_pq::index> : std::true_type {};
 
 template <>
-struct template_matches_index_kind<raft_index_kind::cagra, raft::neighbors::cagra::index> : std::true_type {};
+struct template_matches_index_kind<raft_index_kind::cagra, cuvs::neighbors::cagra::index> : std::true_type {};
 
 template <raft_index_kind index_kind, template <typename...> typename index_template>
 auto static constexpr template_matches_index_kind_v = template_matches_index_kind<index_kind, index_template>::value;
@@ -113,7 +109,8 @@ post_filter(raft::resources const& res, filter_lambda_t const& sample_filter, in
             auto index = thrust::get<0>(index_id_distance);
             auto& id = thrust::get<1>(index_id_distance);
             auto& distance = thrust::get<2>(index_id_distance);
-            if (!sample_filter(index / index_mdspan.extent(1), id)) {
+            //if (!sample_filter(index / index_mdspan.extent(1), id)) {
+            if (!sample_filter.bitset_view_.test(id)) {
                 id = std::numeric_limits<std::remove_reference_t<decltype(id)>>::max();
                 distance = std::numeric_limits<std::remove_reference_t<decltype(distance)>>::max();
             }
@@ -137,13 +134,13 @@ post_filter(raft::resources const& res, filter_lambda_t const& sample_filter, in
 template <typename T, typename IdxT>
 void
 serialize_to_hnswlib(raft::resources const& res, std::ostream& os,
-                     const raft::neighbors::cagra::index<T, IdxT>& index_) {
+                     const cuvs::neighbors::cagra::index<T, IdxT>& index_) {
     size_t metric_type;
-    if (index_.metric() == raft::distance::L2Expanded) {
+    if (index_.metric() == cuvs::distance::DistanceType::L2Expanded) {
         metric_type = 0;
-    } else if (index_.metric() == raft::distance::InnerProduct) {
+    } else if (index_.metric() == cuvs::distance::DistanceType::InnerProduct) {
         metric_type = 1;
-    } else if (index_.metric() == raft::distance::CosineExpanded) {
+    } else if (index_.metric() == cuvs::distance::DistanceType::CosineExpanded) {
         metric_type = 2;
     }
 
@@ -240,23 +237,23 @@ struct raft_index {
     }();
 
     using index_params_type = std::conditional_t<
-        vector_index_kind == raft_index_kind::brute_force, raft::neighbors::brute_force::index_params,
+        vector_index_kind == raft_index_kind::brute_force, cuvs::neighbors::brute_force::index_params,
         std::conditional_t<
-            vector_index_kind == raft_index_kind::ivf_flat, raft::neighbors::ivf_flat::index_params,
+            vector_index_kind == raft_index_kind::ivf_flat, cuvs::neighbors::ivf_flat::index_params,
             std::conditional_t<
-                vector_index_kind == raft_index_kind::ivf_pq, raft::neighbors::ivf_pq::index_params,
-                std::conditional_t<vector_index_kind == raft_index_kind::cagra, raft::neighbors::cagra::index_params,
+                vector_index_kind == raft_index_kind::ivf_pq, cuvs::neighbors::ivf_pq::index_params,
+                std::conditional_t<vector_index_kind == raft_index_kind::cagra, cuvs::neighbors::cagra::index_params,
                                    // Should never get here; precluded by static assertion above
-                                   raft::neighbors::brute_force::index_params>>>>;
+                                   cuvs::neighbors::index_params>>>>;
     using search_params_type = std::conditional_t<
-        vector_index_kind == raft_index_kind::brute_force, raft::neighbors::brute_force::search_params,
+        vector_index_kind == raft_index_kind::brute_force, cuvs::neighbors::brute_force::search_params,
         std::conditional_t<
-            vector_index_kind == raft_index_kind::ivf_flat, raft::neighbors::ivf_flat::search_params,
+            vector_index_kind == raft_index_kind::ivf_flat, cuvs::neighbors::ivf_flat::search_params,
             std::conditional_t<
-                vector_index_kind == raft_index_kind::ivf_pq, raft::neighbors::ivf_pq::search_params,
-                std::conditional_t<vector_index_kind == raft_index_kind::cagra, raft::neighbors::cagra::search_params,
+                vector_index_kind == raft_index_kind::ivf_pq, cuvs::neighbors::ivf_pq::search_params,
+                std::conditional_t<vector_index_kind == raft_index_kind::cagra, cuvs::neighbors::cagra::search_params,
                                    // Should never get here; precluded by static assertion above
-                                   raft::neighbors::brute_force::search_params>>>>;
+                                   cuvs::neighbors::search_params>>>>;
 
     [[nodiscard]] auto&
     get_vector_index() {
@@ -280,42 +277,42 @@ struct raft_index {
         if constexpr (std::is_same_v<DataMdspanT, raft::host_matrix_view<T const, IdxT>>) {
             if constexpr (vector_index_kind == raft_index_kind::brute_force) {
                 return raft_index<underlying_index_type, raft_index_args...>{
-                    raft::neighbors::brute_force::build<T>(res, index_params, data)};
+                    cuvs::neighbors::brute_force::build(res, index_params, data)};
             } else if constexpr (vector_index_kind == raft_index_kind::cagra) {
                 return raft_index<underlying_index_type, raft_index_args...>{
-                    raft::neighbors::cagra::build<T>(res, index_params, data)};
+                    cuvs::neighbors::cagra::build(res, index_params, data)};
             } else if constexpr (vector_index_kind == raft_index_kind::ivf_pq) {
-                return raft_index<underlying_index_type, raft_index_args...>{raft::neighbors::ivf_pq::build<T, IdxT>(
-                    res, index_params, data.data_handle(), data.extent(0), data.extent(1))};
+                return raft_index<underlying_index_type, raft_index_args...>{cuvs::neighbors::ivf_pq::build(
+                    res, index_params, data)};
             } else if constexpr (vector_index_kind == raft_index_kind::ivf_flat) {
                 return raft_index<underlying_index_type, raft_index_args...>{
-                    raft::neighbors::ivf_flat::build<T, IdxT>(res, index_params, data)};
+                    cuvs::neighbors::ivf_flat::build(res, index_params, data)};
             }
         } else {
             if constexpr (vector_index_kind == raft_index_kind::brute_force) {
                 return raft_index<underlying_index_type, raft_index_args...>{
-                    raft::neighbors::brute_force::build<T>(res, index_params, data)};
+                    cuvs::neighbors::brute_force::build(res, data, index_params.metric, index_params.metric_arg)};
             } else if constexpr (vector_index_kind == raft_index_kind::ivf_flat) {
                 return raft_index<underlying_index_type, raft_index_args...>{
-                    raft::neighbors::ivf_flat::build<T, IdxT>(res, index_params, data)};
+                    cuvs::neighbors::ivf_flat::build(res, index_params, data)};
             } else if constexpr (vector_index_kind == raft_index_kind::ivf_pq) {
                 return raft_index<underlying_index_type, raft_index_args...>{
-                    raft::neighbors::ivf_pq::build<T, IdxT>(res, index_params, data)};
+                    cuvs::neighbors::ivf_pq::build(res, index_params, data)};
             } else if constexpr (vector_index_kind == raft_index_kind::cagra) {
                 return raft_index<underlying_index_type, raft_index_args...>{
-                    raft::neighbors::cagra::build<T>(res, index_params, data)};
+                    cuvs::neighbors::cagra::build(res, index_params, data)};
             }
         }
     }
 
-    template <typename T, typename IdxT, typename InputIdxT, typename FilterT = std::nullptr_t>
+    template <typename T, typename IdxT, typename InputIdxT, typename FilterT = cuvs::neighbors::filtering::none_sample_filter>
     auto static search(raft::resources const& res, raft_index<underlying_index_type, raft_index_args...> const& index,
                        search_params_type const& search_params, raft::device_matrix_view<T const, InputIdxT> queries,
                        raft::device_matrix_view<IdxT, InputIdxT> neighbors,
                        raft::device_matrix_view<float, InputIdxT> distances, float refine_ratio = 1.0f,
                        InputIdxT k_offset = InputIdxT{},
                        std::optional<raft::device_matrix_view<const T, InputIdxT>> dataset = std::nullopt,
-                       FilterT filter = nullptr) {
+                       FilterT filter = cuvs::neighbors::filtering::none_sample_filter{}) {
         auto const& underlying_index = index.get_vector_index();
 
         auto k = neighbors.extent(1);
@@ -337,57 +334,41 @@ struct raft_index {
         }
 
         if constexpr (vector_index_kind == raft_index_kind::brute_force) {
-            raft::neighbors::brute_force::search<T>(res, search_params, underlying_index, queries, neighbors_tmp,
-                                                    distances_tmp);
-            if constexpr (!std::is_same_v<FilterT, std::nullptr_t>) {
+            cuvs::neighbors::brute_force::search(res, underlying_index, queries, neighbors_tmp,
+                                                 distances_tmp);
+            if constexpr (!std::is_same_v<FilterT, cuvs::neighbors::filtering::none_sample_filter>) {
                 // TODO(wphicks): This can be replaced once prefiltering is
                 // implemented for brute force upstream
                 detail::post_filter(res, filter, neighbors_tmp, distances_tmp);
             }
         } else if constexpr (vector_index_kind == raft_index_kind::ivf_flat) {
-            if constexpr (std::is_same_v<FilterT, std::nullptr_t>) {
-                raft::neighbors::ivf_flat::search<T, IdxT>(res, search_params, underlying_index, queries, neighbors_tmp,
-                                                           distances_tmp);
-            } else {
-                raft::neighbors::ivf_flat::search_with_filtering<T, IdxT>(res, search_params, underlying_index, queries,
-                                                                          neighbors_tmp, distances_tmp, filter);
-            }
+            cuvs::neighbors::ivf_flat::search(res, search_params, underlying_index, queries, neighbors_tmp,
+                                              distances_tmp, filter);
         } else if constexpr (vector_index_kind == raft_index_kind::ivf_pq) {
-            if constexpr (std::is_same_v<FilterT, std::nullptr_t>) {
-                raft::neighbors::ivf_pq::search<T, IdxT>(res, search_params, underlying_index, queries, neighbors_tmp,
-                                                         distances_tmp);
-            } else {
-                raft::neighbors::ivf_pq::search_with_filtering<T, IdxT>(res, search_params, underlying_index, queries,
-                                                                        neighbors_tmp, distances_tmp, filter);
-            }
+            cuvs::neighbors::ivf_pq::search(res, search_params, underlying_index, queries, neighbors_tmp,
+                                            distances_tmp, filter);
         } else if constexpr (vector_index_kind == raft_index_kind::cagra) {
-            if constexpr (std::is_same_v<FilterT, std::nullptr_t>) {
-                raft::neighbors::cagra::search<T, IdxT>(res, search_params, underlying_index, queries, neighbors_tmp,
-                                                        distances_tmp);
-            } else {
-                raft::neighbors::cagra::search_with_filtering<T, IdxT>(res, search_params, underlying_index, queries,
-                                                                       neighbors_tmp, distances_tmp, filter);
-            }
+            cuvs::neighbors::cagra::search(res, search_params, underlying_index, queries, neighbors_tmp,
+                                           distances_tmp, filter);
         }
         if (refine_ratio > 1.0f) {
             if (dataset.has_value()) {
                 if constexpr (std::is_same_v<IdxT, InputIdxT>) {
-                    raft::neighbors::refine(res, *dataset, queries, raft::make_const_mdspan(neighbors_tmp), neighbors,
+                    cuvs::neighbors::refine(res, *dataset, queries, raft::make_const_mdspan(neighbors_tmp), neighbors,
                                             distances, underlying_index.metric());
                 } else {
-                    // https://github.com/rapidsai/raft/issues/1950
-                    raft::neighbors::refine(
+                    cuvs::neighbors::refine(
                         res,
-                        raft::make_device_matrix_view(dataset->data_handle(), IdxT(dataset->extent(0)),
-                                                      IdxT(dataset->extent(1))),
-                        raft::make_device_matrix_view(queries.data_handle(), IdxT(queries.extent(0)),
-                                                      IdxT(queries.extent(1))),
+                        raft::make_device_matrix_view(dataset->data_handle(), InputIdxT(dataset->extent(0)),
+                                                      InputIdxT(dataset->extent(1))),
+                        raft::make_device_matrix_view(queries.data_handle(), InputIdxT(queries.extent(0)),
+                                                      InputIdxT(queries.extent(1))),
                         raft::make_const_mdspan(raft::make_device_matrix_view(
-                            neighbors_tmp.data_handle(), IdxT(neighbors_tmp.extent(0)), IdxT(neighbors_tmp.extent(1)))),
-                        raft::make_device_matrix_view(neighbors.data_handle(), IdxT(neighbors.extent(0)),
-                                                      IdxT(neighbors.extent(1))),
-                        raft::make_device_matrix_view(distances.data_handle(), IdxT(distances.extent(0)),
-                                                      IdxT(distances.extent(1))),
+                            neighbors_tmp.data_handle(), InputIdxT(neighbors_tmp.extent(0)), InputIdxT(neighbors_tmp.extent(1)))),
+                        raft::make_device_matrix_view(neighbors.data_handle(), InputIdxT(neighbors.extent(0)),
+                                                      InputIdxT(neighbors.extent(1))),
+                        raft::make_device_matrix_view(distances.data_handle(), InputIdxT(distances.extent(0)),
+                                                      InputIdxT(distances.extent(1))),
                         underlying_index.metric());
                 }
             } else {
@@ -406,9 +387,9 @@ struct raft_index {
             // TODO(wphicks): Implement brute force extend
             RAFT_FAIL("Brute force implements no extend method");
         } else if constexpr (vector_index_kind == raft_index_kind::ivf_flat) {
-            return raft_index{raft::neighbors::ivf_flat::extend<T, IdxT>(res, new_vectors, new_ids, underlying_index)};
+            return raft_index{cuvs::neighbors::ivf_flat::extend(res, new_vectors, new_ids, underlying_index)};
         } else if constexpr (vector_index_kind == raft_index_kind::ivf_pq) {
-            return raft_index{raft::neighbors::ivf_pq::extend<T, IdxT>(res, new_vectors, new_ids, underlying_index)};
+            return raft_index{cuvs::neighbors::ivf_pq::extend(res, new_vectors, new_ids, underlying_index)};
         } else if constexpr (vector_index_kind == raft_index_kind::cagra) {
             RAFT_FAIL("CAGRA implements no extend method");
         }
@@ -421,13 +402,13 @@ struct raft_index {
         auto const& underlying_index = index.get_vector_index();
 
         if constexpr (vector_index_kind == raft_index_kind::brute_force) {
-            return raft::neighbors::brute_force::serialize<T>(res, os, underlying_index, include_dataset);
+            return cuvs::neighbors::brute_force::serialize(res, os, underlying_index, include_dataset);
         } else if constexpr (vector_index_kind == raft_index_kind::ivf_flat) {
-            return raft::neighbors::ivf_flat::serialize<T, IdxT>(res, os, underlying_index);
+            return cuvs::neighbors::ivf_flat::serialize(res, os, underlying_index);
         } else if constexpr (vector_index_kind == raft_index_kind::ivf_pq) {
-            return raft::neighbors::ivf_pq::serialize<IdxT>(res, os, underlying_index);
+            return cuvs::neighbors::ivf_pq::serialize(res, os, underlying_index);
         } else if constexpr (vector_index_kind == raft_index_kind::cagra) {
-            return raft::neighbors::cagra::serialize<T, IdxT>(res, os, underlying_index, include_dataset);
+            return cuvs::neighbors::cagra::serialize(res, os, underlying_index, include_dataset);
         }
     }
 
@@ -437,6 +418,7 @@ struct raft_index {
                                      bool include_dataset = true) {
         auto const& underlying_index = index.get_vector_index();
         if constexpr (vector_index_kind == raft_index_kind::cagra) {
+            // TODO(mide): Use cuvs function
             return raft_proto::detail::serialize_to_hnswlib<T, IdxT>(res, os, underlying_index);
         }
     }
@@ -444,13 +426,21 @@ struct raft_index {
     template <typename T, typename IdxT>
     auto static deserialize(raft::resources const& res, std::istream& is) {
         if constexpr (vector_index_kind == raft_index_kind::brute_force) {
-            return raft_index{raft::neighbors::brute_force::deserialize<T>(res, is)};
+            cuvs::neighbors::brute_force::index<T, float> loaded_index(res);
+            cuvs::neighbors::brute_force::deserialize(res, is, &loaded_index);
+            return raft_index{std::forward<decltype(loaded_index)>(loaded_index)};
         } else if constexpr (vector_index_kind == raft_index_kind::ivf_flat) {
-            return raft_index{raft::neighbors::ivf_flat::deserialize<T, IdxT>(res, is)};
+            cuvs::neighbors::ivf_flat::index<T, IdxT> loaded_index(res);
+            cuvs::neighbors::ivf_flat::deserialize(res, is, &loaded_index);
+            return raft_index{std::forward<decltype(loaded_index)>(loaded_index)};
         } else if constexpr (vector_index_kind == raft_index_kind::ivf_pq) {
-            return raft_index{raft::neighbors::ivf_pq::deserialize<IdxT>(res, is)};
+            cuvs::neighbors::ivf_pq::index<IdxT> loaded_index(res);
+            cuvs::neighbors::ivf_pq::deserialize(res, is, &loaded_index);
+            return raft_index{std::forward<decltype(loaded_index)>(loaded_index)};
         } else if constexpr (vector_index_kind == raft_index_kind::cagra) {
-            return raft_index{raft::neighbors::cagra::deserialize<T, IdxT>(res, is)};
+            cuvs::neighbors::cagra::index<T, IdxT> loaded_index(res);
+            cuvs::neighbors::cagra::deserialize(res, is, &loaded_index);
+            return raft_index{std::forward<decltype(loaded_index)>(loaded_index)};
         }
     }
 

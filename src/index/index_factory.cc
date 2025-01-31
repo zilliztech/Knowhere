@@ -14,18 +14,18 @@
 #include "knowhere/index/index_table.h"
 #include "simd/hook.h"
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
 #include <cuda_runtime_api.h>
 #endif
 
 namespace knowhere {
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
 
 bool
 checkGpuAvailable(const std::string& name) {
-    if (name == "GPU_RAFT_BRUTE_FORCE" || name == "GPU_BRUTE_FORCE" || name == "GPU_RAFT_CAGRA" ||
-        name == "GPU_CAGRA" || name == "GPU_RAFT_IVF_FLAT" || name == "GPU_IVF_FLAT" || name == "GPU_RAFT_IVF_PQ" ||
+    if (name == "GPU_CUVS_BRUTE_FORCE" || name == "GPU_BRUTE_FORCE" || name == "GPU_CUVS_CAGRA" ||
+        name == "GPU_CAGRA" || name == "GPU_CUVS_IVF_FLAT" || name == "GPU_IVF_FLAT" || name == "GPU_CUVS_IVF_PQ" ||
         name == "GPU_IVF_PQ") {
         int count = 0;
         auto status = cudaGetDeviceCount(&count);
@@ -55,7 +55,7 @@ IndexFactory::Create(const std::string& name, const int32_t& version, const Obje
     LOG_KNOWHERE_INFO_ << "use key " << key << " to create knowhere index " << name << " with version " << version;
     auto fun_map_v = (FunMapValue<Index<IndexNode>>*)(func_mapping_[key].get());
 
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
     if (!checkGpuAvailable(name)) {
         return expected<Index<IndexNode>>::Err(Status::cuda_runtime_error, "gpu not available");
     }

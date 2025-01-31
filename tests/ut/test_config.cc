@@ -21,7 +21,7 @@
 #ifdef KNOWHERE_WITH_DISKANN
 #include "index/diskann/diskann_config.h"
 #endif
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
 #include "index/gpu_raft/gpu_raft_cagra_config.h"
 #endif
 
@@ -424,7 +424,7 @@ TEST_CASE("Test config json parse", "[config]") {
         CHECK(range_cfg.trace_visit.value() == true);
     }
 #endif
-#ifdef KNOWHERE_WITH_RAFT
+#ifdef KNOWHERE_WITH_CUVS
     SECTION("check cagra index config") {
         knowhere::Json json = knowhere::Json::parse(R"({
             "metric_type": "L2",

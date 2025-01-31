@@ -36,7 +36,7 @@ pipeline {
                         sh "nvidia-smi --query-gpu=name --format=csv,noheader"
                         sh "./scripts/prepare_gpu_build.sh"
                         sh "mkdir build"
-                        sh "cd build/ && conan install .. --build=missing -o with_diskann=True -o with_raft=True -s compiler.libcxx=libstdc++11 && conan build .."
+                        sh "cd build/ && conan install .. --build=missing -o with_diskann=True -o with_cuvs=True -s compiler.libcxx=libstdc++11 && conan build .."
                         sh "cd python && VERSION=${version} python3 setup.py bdist_wheel"
                         dir('python/dist'){
                         knowhere_wheel=sh(returnStdout: true, script: 'ls | grep .whl').trim()

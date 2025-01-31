@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#undef RAFT_EXPLICIT_INSTANTIATE_ONLY
 #include "common/raft/integration/raft_knowhere_index.cuh"
-#include "common/raft/proto/filtered_search_instantiation.cuh"
 #include "common/raft/proto/raft_index_kind.hpp"
 
 namespace raft_knowhere {

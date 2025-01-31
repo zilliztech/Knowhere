@@ -41,7 +41,7 @@ RUN apt update \
 RUN git clone https://github.com/zilliztech/knowhere.git \
     && cd knowhere \
     && mkdir build && cd build \
-    && conan install .. --build=missing -o with_ut=True -o with_diskann=True -o with_raft=True -s compiler.libcxx=libstdc++11 -s build_type=Release \
+    && conan install .. --build=missing -o with_ut=True -o with_diskann=True -o with_cuvs=True -s compiler.libcxx=libstdc++11 -s build_type=Release \
     && conan build .. \
     && cd ../.. \
     && rm -rf knowhere

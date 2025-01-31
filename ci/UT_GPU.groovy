@@ -33,7 +33,7 @@ pipeline {
                         sh "nvidia-smi --query-gpu=name --format=csv,noheader"
                         sh "./scripts/prepare_gpu_build.sh"
                         sh "mkdir build"
-                        sh "cd build/ && conan install .. --build=missing -s build_type=Release -o with_diskann=True -o with_ut=True -o with_raft=True -s compiler.libcxx=libstdc++11 \
+                        sh "cd build/ && conan install .. --build=missing -s build_type=Release -o with_diskann=True -o with_ut=True -o with_cuvs=True -s compiler.libcxx=libstdc++11 \
                               && conan build .. \
                               && ./Release/tests/ut/knowhere_tests"
                     }
