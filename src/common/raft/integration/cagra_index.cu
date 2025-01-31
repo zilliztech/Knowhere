@@ -13,7 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */ 
+ */
 #include "common/raft/integration/raft_knowhere_index.cuh"
 #include "common/raft/proto/raft_index_kind.hpp"
 
